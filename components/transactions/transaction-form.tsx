@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,12 +33,7 @@ const TRANSACTION_TYPES = [
 interface TransactionFormProps {
   onSubmit: (data: any) => void
   loading?: boolean
-  defaultValues?: {
-    type: string
-    amount: string
-    category: string
-    description: string
-  }
+  defaultValues?: any
 }
 
 export function TransactionForm({
@@ -46,31 +41,51 @@ export function TransactionForm({
   loading = false,
   defaultValues,
 }: TransactionFormProps) {
-  const [type, setType] = useState(defaultValues?.type || 'expense')
-  const [amount, setAmount] = useState(defaultValues?.amount || '')
-  const [category, setCategory] = useState(defaultValues?.category || '')
-  const [description, setDescription] = useState(defaultValues?.description || '')
+  const [type, setType] = useState('expense')
+  const [amount, setAmount] = useState('')
+  const [category, setCategory] = useState('')
+  const [description, setDescription] = useState('')
+
+  useEffect(() => {
+    if (defaultValues) {
+      setType(defaultValues.type)
+      setAmount(String(defaultValues.amount))
+      setCategory(defaultValues.category)
+      setDescription(defaultValues.description || '')
+    }
+  }, [defaultValues])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    onSubmit({ type, amount, category, description })
+    onSubmit({
+      ...defaultValues,
+      type,
+      amount: Number(amount),
+      category,
+      description,
+    })
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add Transaction</CardTitle>
+        <CardTitle>
+          {defaultValues ? 'Edit Transaction' : 'Add Transaction'}
+        </CardTitle>
         <CardDescription>
-          Record a new income or expense transaction
+          {defaultValues
+            ? 'Update your transaction details'
+            : 'Record a new income or expense'}
         </CardDescription>
       </CardHeader>
+
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
+              <Label>Type</Label>
               <Select value={type} onValueChange={setType}>
-                <SelectTrigger id="type">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -84,12 +99,9 @@ export function TransactionForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount ($)</Label>
+              <Label>Amount (Rp)</Label>
               <Input
-                id="amount"
                 type="number"
-                placeholder="0.00"
-                step="0.01"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
@@ -99,9 +111,9 @@ export function TransactionForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label>Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category">
+              <SelectTrigger>
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
@@ -115,10 +127,8 @@ export function TransactionForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label>Description</Label>
             <Textarea
-              id="description"
-              placeholder="Add notes about this transaction..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={loading}
@@ -126,7 +136,11 @@ export function TransactionForm({
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Adding...' : 'Add Transaction'}
+            {loading
+              ? 'Saving...'
+              : defaultValues
+              ? 'Update Transaction'
+              : 'Add Transaction'}
           </Button>
         </form>
       </CardContent>

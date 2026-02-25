@@ -15,13 +15,15 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<any | null>(null)
+
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     async function init() {
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (!session) {
         router.push('/login')
         return
@@ -33,63 +35,78 @@ export default function TransactionsPage() {
     }
 
     init()
-  }, [router, supabase])
+  }, [router])
 
   async function loadTransactions(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('Error loading transactions:', error)
-      } else {
-        setTransactions(data || [])
-      }
-    } catch (err) {
-      console.error('Error:', err)
+    if (!error) {
+      setTransactions(data || [])
     }
   }
 
-  async function handleAddTransaction(formData: any) {
+  // 🔥 HANDLE ADD OR UPDATE
+  async function handleSubmitTransaction(formData: any) {
     setSubmitting(true)
-    try {
-      const { error } = await supabase.from('transactions').insert([
-        {
-          user_id: user.id,
-          type: formData.type,
-          amount: parseFloat(formData.amount),
-          category: formData.category,
-          description: formData.description,
-          created_at: new Date().toISOString(),
-        },
-      ])
 
-      if (error) {
-        console.error('Error adding transaction:', error)
+    try {
+      if (editingTransaction) {
+        // UPDATE MODE
+        const { error } = await supabase
+          .from('transactions')
+          .update({
+            type: formData.type,
+            amount: Number(formData.amount),
+            category: formData.category,
+            description: formData.description,
+          })
+          .eq('id', editingTransaction.id)
+
+        if (error) {
+          console.error('Update error:', error)
+        } else {
+          setEditingTransaction(null)
+          await loadTransactions(user.id)
+        }
+
       } else {
-        await loadTransactions(user.id)
+        // INSERT MODE
+        const { error } = await supabase.from('transactions').insert([
+          {
+            user_id: user.id,
+            type: formData.type,
+            amount: Number(formData.amount),
+            category: formData.category,
+            description: formData.description,
+            created_at: new Date().toISOString(),
+          },
+        ])
+
+        if (error) {
+          console.error('Insert error:', error)
+        } else {
+          await loadTransactions(user.id)
+        }
       }
     } catch (err) {
-      console.error('Error:', err)
+      console.error(err)
     } finally {
       setSubmitting(false)
     }
   }
 
   async function handleDeleteTransaction(id: string) {
-    try {
-      const { error } = await supabase.from('transactions').delete().eq('id', id)
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id)
 
-      if (error) {
-        console.error('Error deleting transaction:', error)
-      } else {
-        await loadTransactions(user.id)
-      }
-    } catch (err) {
-      console.error('Error:', err)
+    if (!error) {
+      await loadTransactions(user.id)
     }
   }
 
@@ -103,6 +120,7 @@ export default function TransactionsPage() {
 
   return (
     <div className="min-h-screen bg-background">
+
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
@@ -122,14 +140,16 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main */}
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
           {/* Form */}
           <div className="lg:col-span-1">
             <TransactionForm
-              onSubmit={handleAddTransaction}
+              onSubmit={handleSubmitTransaction}
               loading={submitting}
+              defaultValues={editingTransaction}
             />
           </div>
 
@@ -139,8 +159,10 @@ export default function TransactionsPage() {
               transactions={transactions}
               loading={loading}
               onDelete={handleDeleteTransaction}
+              onEdit={(transaction) => setEditingTransaction(transaction)}
             />
           </div>
+
         </div>
       </div>
     </div>

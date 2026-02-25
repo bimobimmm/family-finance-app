@@ -1,83 +1,71 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { TrendingUp, Wallet, Target } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils' // ✅ Import formatter
+import { Progress } from '@/components/ui/progress'
+import { Wallet, TrendingUp, Target } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 
-interface OverviewCardsProps {
-  loading?: boolean
-  totalBalance?: number
-  monthlySpending?: number
-  savingsTarget?: number
+interface Props {
+  totalBalance: number
+  monthlySpending: number
+  savingsTarget: number
+  savingsProgress?: number
 }
 
 export function OverviewCards({
-  loading = false,
-  totalBalance = 0,
-  monthlySpending = 0,
-  savingsTarget = 0,
-}: OverviewCardsProps) {
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardHeader className="pb-3">
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-32 mb-2" />
-              <Skeleton className="h-3 w-20" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
-  const cards = [
-    {
-      title: 'Total Balance',
-      value: formatCurrency(totalBalance),
-      icon: Wallet,
-      color: 'text-blue-500',
-    },
-    {
-      title: 'Monthly Spending',
-      value: formatCurrency(monthlySpending),
-      icon: TrendingUp,
-      color: 'text-red-500',
-    },
-    {
-      title: 'Savings Target',
-      value: formatCurrency(savingsTarget),
-      icon: Target,
-      color: 'text-green-500',
-    },
-  ]
+  totalBalance,
+  monthlySpending,
+  savingsTarget,
+  savingsProgress = 0,
+}: Props) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {cards.map((card) => {
-        const Icon = card.icon
-        return (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <Icon className={`h-4 w-4 ${card.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Updated just now
-              </p>
-            </CardContent>
-          </Card>
-        )
-      })}
+
+      <Card>
+        <CardHeader className="flex justify-between">
+          <CardTitle>Total Balance</CardTitle>
+          <Wallet className="text-blue-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {formatCurrency(totalBalance)}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex justify-between">
+          <CardTitle>Monthly Spending</CardTitle>
+          <TrendingUp className="text-red-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {formatCurrency(monthlySpending)}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex justify-between">
+          <CardTitle>Savings Target</CardTitle>
+          <Target className="text-green-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {formatCurrency(savingsTarget)}
+          </div>
+
+          <div className="mt-3">
+            <Progress value={savingsProgress} className="h-2" />
+            <p className="text-xs mt-1 text-muted-foreground">
+              {savingsProgress}% completed
+            </p>
+          </div>
+
+        </CardContent>
+      </Card>
+
     </div>
   )
 }

@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Pencil } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { formatCurrency } from '@/lib/utils'
 
 interface Transaction {
   id: string
@@ -20,12 +21,14 @@ interface TransactionListProps {
   transactions?: Transaction[]
   loading?: boolean
   onDelete?: (id: string) => void
+  onEdit?: (transaction: Transaction) => void
 }
 
 export function TransactionList({
   transactions = [],
   loading = false,
   onDelete,
+  onEdit,
 }: TransactionListProps) {
   if (loading) {
     return (
@@ -53,11 +56,6 @@ export function TransactionList({
             No transactions yet. Add one to get started!
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Transactions you add will appear here.
-          </p>
-        </CardContent>
       </Card>
     )
   }
@@ -70,6 +68,7 @@ export function TransactionList({
           {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
         </CardDescription>
       </CardHeader>
+
       <CardContent>
         <div className="space-y-4">
           {transactions.map((transaction) => (
@@ -78,27 +77,37 @@ export function TransactionList({
               className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
             >
               <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="font-medium">{transaction.category}</p>
-                    {transaction.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {transaction.description}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(transaction.date), {
-                        addSuffix: true,
-                      })}
-                    </p>
-                  </div>
-                </div>
+                <p className="font-medium">{transaction.category}</p>
+
+                {transaction.description && (
+                  <p className="text-sm text-muted-foreground">
+                    {transaction.description}
+                  </p>
+                )}
+
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatDistanceToNow(new Date(transaction.date), {
+                    addSuffix: true,
+                  })}
+                </p>
               </div>
 
               <div className="flex items-center gap-3">
                 <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'}>
-                  {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                  {transaction.type === 'income' ? '+' : '-'}
+                  {formatCurrency(transaction.amount)}
                 </Badge>
+
+                {onEdit && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onEdit(transaction)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+
                 {onDelete && (
                   <Button
                     size="sm"

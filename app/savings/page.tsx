@@ -15,13 +15,14 @@ export default function SavingsPage() {
   const [targets, setTargets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     async function init() {
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (!session) {
         router.push('/login')
         return
@@ -33,65 +34,49 @@ export default function SavingsPage() {
     }
 
     init()
-  }, [router, supabase])
+  }, [router])
 
   async function loadTargets(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('savings_targets')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+    const { data, error } = await supabase
+      .from('savings_targets')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('Error loading targets:', error)
-      } else {
-        setTargets(data || [])
-      }
-    } catch (err) {
-      console.error('Error:', err)
+    if (error) {
+      console.error('Error loading targets:', error)
+      return
     }
+
+    setTargets(data || [])
   }
 
   async function handleAddTarget(formData: any) {
     setSubmitting(true)
-    try {
-      const { error } = await supabase.from('savings_targets').insert([
-        {
-          user_id: user.id,
-          name: formData.name,
-          target_amount: parseFloat(formData.targetAmount),
-          current_amount: parseFloat(formData.currentAmount),
-          due_date: formData.dueDate || null,
-          notes: formData.notes,
-          created_at: new Date().toISOString(),
-        },
-      ])
 
-      if (error) {
-        console.error('Error adding target:', error)
-      } else {
-        await loadTargets(user.id)
-      }
-    } catch (err) {
-      console.error('Error:', err)
-    } finally {
-      setSubmitting(false)
+    const { error } = await supabase.from('savings_targets').insert([
+      {
+        user_id: user.id,
+        name: formData.name,
+        target_amount: Number(formData.targetAmount),
+        current_amount: Number(formData.currentAmount),
+        deadline: formData.deadline || null,
+        created_at: new Date().toISOString(),
+      },
+    ])
+
+    if (error) {
+      console.error('Insert error:', error)
+    } else {
+      await loadTargets(user.id)
     }
+
+    setSubmitting(false)
   }
 
   async function handleDeleteTarget(id: string) {
-    try {
-      const { error } = await supabase.from('savings_targets').delete().eq('id', id)
-
-      if (error) {
-        console.error('Error deleting target:', error)
-      } else {
-        await loadTargets(user.id)
-      }
-    } catch (err) {
-      console.error('Error:', err)
-    }
+    await supabase.from('savings_targets').delete().eq('id', id)
+    await loadTargets(user.id)
   }
 
   if (loading) {
@@ -104,44 +89,28 @@ export default function SavingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold">Savings Goals</h1>
-              <p className="text-muted-foreground mt-1">
-                Track and manage your savings targets
-              </p>
-            </div>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center gap-4">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold">Savings Goals</h1>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form */}
-          <div className="lg:col-span-1">
-            <SavingsForm
-              onSubmit={handleAddTarget}
-              loading={submitting}
-            />
-          </div>
+      <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-1">
+          <SavingsForm onSubmit={handleAddTarget} loading={submitting} />
+        </div>
 
-          {/* List */}
-          <div className="lg:col-span-2">
-            <SavingsList
-              targets={targets}
-              loading={loading}
-              onDelete={handleDeleteTarget}
-            />
-          </div>
+        <div className="lg:col-span-2">
+          <SavingsList
+            targets={targets}
+            loading={false}
+            onDelete={handleDeleteTarget}
+          />
         </div>
       </div>
     </div>
