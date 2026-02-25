@@ -1,0 +1,149 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
+import { SavingsForm } from '@/components/savings/savings-form'
+import { SavingsList } from '@/components/savings/savings-list'
+import { ArrowLeft } from 'lucide-react'
+
+export default function SavingsPage() {
+  const [user, setUser] = useState<any>(null)
+  const [targets, setTargets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        router.push('/login')
+        return
+      }
+
+      setUser(session.user)
+      await loadTargets(session.user.id)
+      setLoading(false)
+    }
+
+    init()
+  }, [router, supabase])
+
+  async function loadTargets(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('savings_targets')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading targets:', error)
+      } else {
+        setTargets(data || [])
+      }
+    } catch (err) {
+      console.error('Error:', err)
+    }
+  }
+
+  async function handleAddTarget(formData: any) {
+    setSubmitting(true)
+    try {
+      const { error } = await supabase.from('savings_targets').insert([
+        {
+          user_id: user.id,
+          name: formData.name,
+          target_amount: parseFloat(formData.targetAmount),
+          current_amount: parseFloat(formData.currentAmount),
+          due_date: formData.dueDate || null,
+          notes: formData.notes,
+          created_at: new Date().toISOString(),
+        },
+      ])
+
+      if (error) {
+        console.error('Error adding target:', error)
+      } else {
+        await loadTargets(user.id)
+      }
+    } catch (err) {
+      console.error('Error:', err)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDeleteTarget(id: string) {
+    try {
+      const { error } = await supabase.from('savings_targets').delete().eq('id', id)
+
+      if (error) {
+        console.error('Error deleting target:', error)
+      } else {
+        await loadTargets(user.id)
+      }
+    } catch (err) {
+      console.error('Error:', err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Spinner className="h-8 w-8" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b border-border bg-card">
+        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold">Savings Goals</h1>
+              <p className="text-muted-foreground mt-1">
+                Track and manage your savings targets
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Form */}
+          <div className="lg:col-span-1">
+            <SavingsForm
+              onSubmit={handleAddTarget}
+              loading={submitting}
+            />
+          </div>
+
+          {/* List */}
+          <div className="lg:col-span-2">
+            <SavingsList
+              targets={targets}
+              loading={loading}
+              onDelete={handleDeleteTarget}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
