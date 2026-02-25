@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TrendingUp, Wallet, Target } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils' // ✅ Import formatter
 
 interface OverviewCardsProps {
   loading?: boolean
@@ -38,19 +39,19 @@ export function OverviewCards({
   const cards = [
     {
       title: 'Total Balance',
-      value: `$${totalBalance.toFixed(2)}`,
+      value: formatCurrency(totalBalance),
       icon: Wallet,
       color: 'text-blue-500',
     },
     {
       title: 'Monthly Spending',
-      value: `$${monthlySpending.toFixed(2)}`,
+      value: formatCurrency(monthlySpending),
       icon: TrendingUp,
       color: 'text-red-500',
     },
     {
       title: 'Savings Target',
-      value: `$${savingsTarget.toFixed(2)}`,
+      value: formatCurrency(savingsTarget),
       icon: Target,
       color: 'text-green-500',
     },
