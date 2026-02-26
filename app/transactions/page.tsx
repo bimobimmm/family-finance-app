@@ -11,108 +11,105 @@ import { TransactionList } from '@/components/transactions/transaction-list'
 import { ArrowLeft } from 'lucide-react'
 
 export default function TransactionsPage() {
+  const router = useRouter()
+  const supabase = createClient()
+
   const [user, setUser] = useState<any>(null)
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [editingTransaction, setEditingTransaction] = useState<any | null>(null)
 
-  const router = useRouter()
-  const supabase = createClient()
+  const [familyId, setFamilyId] = useState<string | null>(null)
+  const [scope, setScope] = useState<'personal' | 'family'>('personal')
 
   useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session) {
-        router.push('/login')
-        return
-      }
-
-      setUser(session.user)
-      await loadTransactions(session.user.id)
-      setLoading(false)
-    }
-
     init()
-  }, [router])
+  }, [])
 
-  async function loadTransactions(userId: string) {
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+  async function init() {
+    const { data: { session } } = await supabase.auth.getSession()
 
-    if (!error) {
-      setTransactions(data || [])
+    if (!session) {
+      router.push('/login')
+      return
     }
+
+    setUser(session.user)
+    await loadFamily(session.user.id)
+    await loadTransactions(session.user.id, null)
+
+    setLoading(false)
   }
 
-  // 🔥 HANDLE ADD OR UPDATE
-  async function handleSubmitTransaction(formData: any) {
+  async function loadFamily(userId: string) {
+    const { data } = await supabase
+      .from('family_members')
+      .select('family_id')
+      .eq('user_id', userId)
+      .single()
+
+    if (data) setFamilyId(data.family_id)
+  }
+
+  async function loadTransactions(userId: string, modeFamilyId: string | null) {
+
+    let query = supabase.from('transactions').select('*')
+
+    if (modeFamilyId) {
+      query = query
+        .eq('scope', 'family')
+        .eq('family_id', modeFamilyId)
+    } else {
+      query = query
+        .eq('scope', 'personal')
+        .eq('user_id', userId)
+    }
+
+    const { data } = await query.order('created_at', { ascending: false })
+    setTransactions(data || [])
+  }
+
+  async function handleAddTransaction(formData: any) {
     setSubmitting(true)
 
     try {
-      if (editingTransaction) {
-        // UPDATE MODE
-        const { error } = await supabase
-          .from('transactions')
-          .update({
-            type: formData.type,
-            amount: Number(formData.amount),
-            category: formData.category,
-            description: formData.description,
-          })
-          .eq('id', editingTransaction.id)
+      const { error } = await supabase.from('transactions').insert([
+        {
+          user_id: user.id,
+          type: formData.type,
+          amount: parseFloat(formData.amount),
+          category: formData.category,
+          description: formData.description,
+          scope: scope,
+          family_id: scope === 'family' ? familyId : null,
+          created_by: user.id,
+          created_at: new Date().toISOString(),
+        },
+      ])
 
-        if (error) {
-          console.error('Update error:', error)
-        } else {
-          setEditingTransaction(null)
-          await loadTransactions(user.id)
-        }
-
-      } else {
-        // INSERT MODE
-        const { error } = await supabase.from('transactions').insert([
-          {
-            user_id: user.id,
-            type: formData.type,
-            amount: Number(formData.amount),
-            category: formData.category,
-            description: formData.description,
-            created_at: new Date().toISOString(),
-          },
-        ])
-
-        if (error) {
-          console.error('Insert error:', error)
-        } else {
-          await loadTransactions(user.id)
-        }
+      if (!error) {
+        await loadTransactions(
+          user.id,
+          scope === 'family' ? familyId : null
+        )
       }
-    } catch (err) {
-      console.error(err)
     } finally {
       setSubmitting(false)
     }
   }
 
   async function handleDeleteTransaction(id: string) {
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', id)
+    await supabase.from('transactions').delete().eq('id', id)
 
-    if (!error) {
-      await loadTransactions(user.id)
-    }
+    await loadTransactions(
+      user.id,
+      scope === 'family' ? familyId : null
+    )
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center">
         <Spinner className="h-8 w-8" />
       </div>
     )
@@ -121,49 +118,65 @@ export default function TransactionsPage() {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* Header */}
-      <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold">Transactions</h1>
-              <p className="text-muted-foreground mt-1">
-                Manage your income and expenses
-              </p>
-            </div>
+      <div className="border-b bg-card">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center gap-4">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+
+          <div>
+            <h1 className="text-3xl font-bold">Transactions</h1>
+            <p>Manage your income and expenses</p>
           </div>
         </div>
       </div>
 
-      {/* Main */}
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
 
-          {/* Form */}
-          <div className="lg:col-span-1">
+        {/* Mode Switch */}
+        <div className="flex gap-3">
+          <Button
+            variant={scope === 'personal' ? 'default' : 'outline'}
+            onClick={() => {
+              setScope('personal')
+              loadTransactions(user.id, null)
+            }}
+          >
+            Personal
+          </Button>
+
+          {familyId && (
+            <Button
+              variant={scope === 'family' ? 'default' : 'outline'}
+              onClick={() => {
+                setScope('family')
+                loadTransactions(user.id, familyId)
+              }}
+            >
+              Family
+            </Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div>
             <TransactionForm
-              onSubmit={handleSubmitTransaction}
+              onSubmit={handleAddTransaction}
               loading={submitting}
-              defaultValues={editingTransaction}
             />
           </div>
 
-          {/* List */}
           <div className="lg:col-span-2">
             <TransactionList
               transactions={transactions}
-              loading={loading}
               onDelete={handleDeleteTransaction}
-              onEdit={(transaction) => setEditingTransaction(transaction)}
+              currentUserId={user.id}
             />
           </div>
-
         </div>
+
       </div>
     </div>
   )

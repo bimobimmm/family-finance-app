@@ -12,14 +12,16 @@ import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { CategoryBreakdown } from '@/components/dashboard/category-breakdown'
 import { ThemeToggle } from '@/components/theme-toggle'
 
-export default function DashboardPage() {
+export default function FamilyHubPage() {
 
   const router = useRouter()
   const supabase = createClient()
 
-  const [user, setUser] = useState<any>(null)
-  const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [familyId, setFamilyId] = useState<string | null>(null)
+
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [members, setMembers] = useState<any[]>([])
 
   const [totalBalance, setTotalBalance] = useState(0)
   const [monthlySpending, setMonthlySpending] = useState(0)
@@ -31,6 +33,7 @@ export default function DashboardPage() {
   }, [])
 
   async function init() {
+
     const { data: { session } } = await supabase.auth.getSession()
 
     if (!session) {
@@ -38,19 +41,41 @@ export default function DashboardPage() {
       return
     }
 
-    setUser(session.user)
-    await loadPersonal(session.user.id)
+    // 🔹 ambil family id user
+    const { data: member } = await supabase
+      .from('family_members')
+      .select('family_id')
+      .eq('user_id', session.user.id)
+      .single()
+
+    if (!member) {
+      setLoading(false)
+      return
+    }
+
+    setFamilyId(member.family_id)
+
+    await loadFamily(member.family_id)
+
     setLoading(false)
   }
 
-  async function loadPersonal(userId: string) {
+  async function loadFamily(familyId: string) {
 
-    // 🔹 TRANSACTIONS
+    // 🔹 load family members
+    const { data: familyMembers } = await supabase
+      .from('family_members')
+      .select('*')
+      .eq('family_id', familyId)
+
+    setMembers(familyMembers || [])
+
+    // 🔹 load transactions
     const { data: trx } = await supabase
       .from('transactions')
       .select('*')
-      .eq('user_id', userId)
-      .eq('scope', 'personal')
+      .eq('family_id', familyId)
+      .eq('scope', 'family')
 
     setTransactions(trx || [])
 
@@ -59,6 +84,7 @@ export default function DashboardPage() {
     const now = new Date()
 
     trx?.forEach((t: any) => {
+
       if (t.type === 'income') balance += t.amount
       else balance -= t.amount
 
@@ -76,12 +102,12 @@ export default function DashboardPage() {
     setTotalBalance(balance)
     setMonthlySpending(monthExpense)
 
-    // 🔹 SAVINGS
+    // 🔹 load savings
     const { data: savings } = await supabase
       .from('savings_targets')
       .select('*')
-      .eq('user_id', userId)
-      .eq('scope', 'personal')
+      .eq('family_id', familyId)
+      .eq('scope', 'family')
 
     let totalTarget = 0
     let totalCurrent = 0
@@ -100,15 +126,18 @@ export default function DashboardPage() {
     )
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Spinner className="h-8 w-8" />
+      </div>
+    )
+  }
+
+  if (!familyId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>No family found. Create or join one first.</p>
       </div>
     )
   }
@@ -120,32 +149,47 @@ export default function DashboardPage() {
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <h1 className="text-3xl font-bold">Family Hub</h1>
             <p className="text-muted-foreground mt-1">
-              Welcome back, {user?.email}
+              Shared Family Finance
             </p>
           </div>
 
-          <div className="flex gap-2 items-center">
+          <Link href="/family-settings">
+  <Button variant="outline">
+    Family Settings
+  </Button>
+</Link>
+
+          <div className="flex items-center gap-4">
+            {/* FAMILY MEMBERS AVATAR */}
+            <div className="flex -space-x-2">
+              {members.map((m, i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs border border-background"
+                >
+                  {m.user_id.slice(0, 2).toUpperCase()}
+                </div>
+              ))}
+            </div>
+
             <ThemeToggle />
 
-            <Link href="/family-hub">
+            <Link href="/dashboard">
               <Button variant="outline">
-                Family Hub
+                Personal
               </Button>
             </Link>
-
-            <Button onClick={handleLogout}>
-              Logout
-            </Button>
           </div>
         </div>
       </div>
 
+      
+
       {/* CONTENT */}
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-        {/* OVERVIEW CARDS */}
         <OverviewCards
           totalBalance={totalBalance}
           monthlySpending={monthlySpending}
@@ -153,33 +197,31 @@ export default function DashboardPage() {
           savingsProgress={savingsProgress}
         />
 
-        {/* CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SpendingChart transactions={transactions} />
           <CategoryBreakdown transactions={transactions} />
         </div>
 
-        {/* QUICK ACTION CARDS (RESTORED) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          <Link href="/transactions">
+          <Link href="/family-transactions">
             <div className="p-6 border border-border rounded-lg hover:bg-accent transition-colors cursor-pointer">
               <h3 className="font-semibold text-lg mb-1">
-                Transactions
+                Family Transactions
               </h3>
               <p className="text-sm text-muted-foreground">
-                Add, edit and manage your personal transactions
+                Manage shared transactions
               </p>
             </div>
           </Link>
 
-          <Link href="/savings">
+          <Link href="/family-savings">
             <div className="p-6 border border-border rounded-lg hover:bg-accent transition-colors cursor-pointer">
               <h3 className="font-semibold text-lg mb-1">
-                Savings Goals
+                Family Savings
               </h3>
               <p className="text-sm text-muted-foreground">
-                Create and manage your savings targets
+                Manage shared savings goals
               </p>
             </div>
           </Link>

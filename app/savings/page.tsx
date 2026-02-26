@@ -11,77 +11,107 @@ import { SavingsList } from '@/components/savings/savings-list'
 import { ArrowLeft } from 'lucide-react'
 
 export default function SavingsPage() {
+  const router = useRouter()
+  const supabase = createClient()
+
   const [user, setUser] = useState<any>(null)
   const [targets, setTargets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  const router = useRouter()
-  const supabase = createClient()
+  const [familyId, setFamilyId] = useState<string | null>(null)
+  const [scope, setScope] = useState<'personal' | 'family'>('personal')
 
   useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session) {
-        router.push('/login')
-        return
-      }
-
-      setUser(session.user)
-      await loadTargets(session.user.id)
-      setLoading(false)
-    }
-
     init()
-  }, [router])
+  }, [])
 
-  async function loadTargets(userId: string) {
-    const { data, error } = await supabase
-      .from('savings_targets')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+  async function init() {
+    const { data: { session } } = await supabase.auth.getSession()
 
-    if (error) {
-      console.error('Error loading targets:', error)
+    if (!session) {
+      router.push('/login')
       return
     }
 
+    setUser(session.user)
+
+    await loadFamily(session.user.id)
+    await loadTargets(session.user.id, null)
+
+    setLoading(false)
+  }
+
+  async function loadFamily(userId: string) {
+    const { data } = await supabase
+      .from('family_members')
+      .select('family_id')
+      .eq('user_id', userId)
+      .single()
+
+    if (data) setFamilyId(data.family_id)
+  }
+
+  async function loadTargets(userId: string, modeFamilyId: string | null) {
+
+    let query = supabase.from('savings_targets').select('*')
+
+    if (modeFamilyId) {
+      query = query
+        .eq('scope', 'family')
+        .eq('family_id', modeFamilyId)
+    } else {
+      query = query
+        .eq('scope', 'personal')
+        .eq('user_id', userId)
+    }
+
+    const { data } = await query.order('created_at', { ascending: false })
     setTargets(data || [])
   }
 
   async function handleAddTarget(formData: any) {
     setSubmitting(true)
 
-    const { error } = await supabase.from('savings_targets').insert([
-      {
-        user_id: user.id,
-        name: formData.name,
-        target_amount: Number(formData.targetAmount),
-        current_amount: Number(formData.currentAmount),
-        deadline: formData.deadline || null,
-        created_at: new Date().toISOString(),
-      },
-    ])
+    try {
+      const { error } = await supabase.from('savings_targets').insert([
+        {
+          user_id: user.id,
+          name: formData.name,
+          target_amount: parseFloat(formData.targetAmount),
+          current_amount: parseFloat(formData.currentAmount),
+          due_date: formData.dueDate || null,
+          notes: formData.notes,
+          scope: scope,
+          family_id: scope === 'family' ? familyId : null,
+          created_by: user.id,
+          created_at: new Date().toISOString(),
+        },
+      ])
 
-    if (error) {
-      console.error('Insert error:', error)
-    } else {
-      await loadTargets(user.id)
+      if (!error) {
+        await loadTargets(
+          user.id,
+          scope === 'family' ? familyId : null
+        )
+      }
+    } finally {
+      setSubmitting(false)
     }
-
-    setSubmitting(false)
   }
 
   async function handleDeleteTarget(id: string) {
     await supabase.from('savings_targets').delete().eq('id', id)
-    await loadTargets(user.id)
+
+    await loadTargets(
+      user.id,
+      scope === 'family' ? familyId : null
+    )
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center">
         <Spinner className="h-8 w-8" />
       </div>
     )
@@ -89,29 +119,65 @@ export default function SavingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card">
+
+      <div className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-4 py-6 flex items-center gap-4">
           <Link href="/dashboard">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold">Savings Goals</h1>
+
+          <div>
+            <h1 className="text-3xl font-bold">Savings Goals</h1>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <SavingsForm onSubmit={handleAddTarget} loading={submitting} />
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+        {/* Mode Switch */}
+        <div className="flex gap-3">
+          <Button
+            variant={scope === 'personal' ? 'default' : 'outline'}
+            onClick={() => {
+              setScope('personal')
+              loadTargets(user.id, null)
+            }}
+          >
+            Personal
+          </Button>
+
+          {familyId && (
+            <Button
+              variant={scope === 'family' ? 'default' : 'outline'}
+              onClick={() => {
+                setScope('family')
+                loadTargets(user.id, familyId)
+              }}
+            >
+              Family
+            </Button>
+          )}
         </div>
 
-        <div className="lg:col-span-2">
-          <SavingsList
-            targets={targets}
-            loading={false}
-            onDelete={handleDeleteTarget}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div>
+            <SavingsForm
+              onSubmit={handleAddTarget}
+              loading={submitting}
+            />
+          </div>
+
+          <div className="lg:col-span-2">
+            <SavingsList
+              targets={targets}
+              onDelete={handleDeleteTarget}
+              currentUserId={user.id}
+            />
+          </div>
         </div>
+
       </div>
     </div>
   )

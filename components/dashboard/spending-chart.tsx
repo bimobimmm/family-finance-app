@@ -1,6 +1,5 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   BarChart,
   Bar,
@@ -8,10 +7,9 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  CartesianGrid,
-  Cell,
+  CartesianGrid
 } from 'recharts'
-import { formatCurrency } from '@/lib/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface Props {
   transactions: any[]
@@ -19,80 +17,72 @@ interface Props {
 
 export function SpendingChart({ transactions }: Props) {
 
-  const monthly: Record<string, number> = {}
+  const daily: Record<string, number> = {}
 
   transactions.forEach((t) => {
     if (t.type === 'expense') {
       const date = new Date(t.created_at)
-      const key = `${date.getMonth() + 1}/${date.getFullYear()}`
-      monthly[key] = (monthly[key] || 0) + Number(t.amount)
+      const key = date.toLocaleDateString('id-ID')
+      daily[key] = (daily[key] || 0) + Number(t.amount)
     }
   })
 
-  const data = Object.entries(monthly).map(([month, spending]) => ({
-    month,
-    spending,
+  const data = Object.entries(daily).map(([date, value]) => ({
+    date,
+    spending: value
   }))
-
-  const colors = [
-    '#3b82f6',
-    '#ef4444',
-    '#10b981',
-    '#f59e0b',
-    '#8b5cf6',
-    '#06b6d4',
-  ]
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Spending Overview</CardTitle>
+        <CardTitle>Daily Spending</CardTitle>
       </CardHeader>
 
-      <CardContent className="h-80 pl-6 pr-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 20, right: 20, left: 20, bottom: 10 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+      <CardContent className="h-[260px]">
 
-            <XAxis
-              dataKey="month"
-              stroke="#aaa"
-            />
-
-            <YAxis
-              stroke="#aaa"
-              tickFormatter={(value) =>
-                new Intl.NumberFormat('id-ID').format(value)
-              }
-              domain={[0, 'dataMax + 500000']}
-            />
-
-            <Tooltip
-              formatter={(value: any) => formatCurrency(value)}
-              contentStyle={{
-                backgroundColor: '#111',
-                border: '1px solid #333',
-              }}
-              labelStyle={{ color: '#fff' }}
-            />
-
-            <Bar
-              dataKey="spending"
-              radius={[8, 8, 0, 0]}
+        {data.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            No expense data
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              margin={{ top: 10, right: 10, left: 20, bottom: 0 }}
+              barCategoryGap="20%"   // 🔥 lebih rapat
             >
-              {data.map((_, index) => (
-                <Cell
-                  key={index}
-                  fill={colors[index % colors.length]}
-                />
-              ))}
-            </Bar>
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
 
-          </BarChart>
-        </ResponsiveContainer>
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 12 }}
+              />
+
+              <YAxis
+                tickFormatter={(v) =>
+                  new Intl.NumberFormat('id-ID', {
+                    notation: 'compact'
+                  }).format(v)
+                }
+                tick={{ fontSize: 12 }}
+              />
+
+              <Tooltip
+                formatter={(v: any) =>
+                  `Rp ${new Intl.NumberFormat('id-ID').format(v)}`
+                }
+              />
+
+              <Bar
+                dataKey="spending"
+                fill="#3b82f6"
+                radius={[6, 6, 0, 0]}
+                barSize={40}   // 🔥 lebih proporsional
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+
       </CardContent>
     </Card>
   )

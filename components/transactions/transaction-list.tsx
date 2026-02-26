@@ -4,9 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Trash2, Pencil } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { formatCurrency } from '@/lib/utils'
 
 interface Transaction {
   id: string
@@ -14,22 +13,24 @@ interface Transaction {
   amount: number
   category: string
   description?: string
-  date: Date | string
+  created_at: string
+  created_by: string
 }
 
 interface TransactionListProps {
   transactions?: Transaction[]
   loading?: boolean
   onDelete?: (id: string) => void
-  onEdit?: (transaction: Transaction) => void
+  currentUserId?: string
 }
 
 export function TransactionList({
   transactions = [],
   loading = false,
   onDelete,
-  onEdit,
+  currentUserId,
 }: TransactionListProps) {
+
   if (loading) {
     return (
       <Card>
@@ -53,9 +54,14 @@ export function TransactionList({
         <CardHeader>
           <CardTitle>Recent Transactions</CardTitle>
           <CardDescription>
-            No transactions yet. Add one to get started!
+            No transactions yet.
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Transactions will appear here.
+          </p>
+        </CardContent>
       </Card>
     )
   }
@@ -74,7 +80,7 @@ export function TransactionList({
           {transactions.map((transaction) => (
             <div
               key={transaction.id}
-              className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+              className="flex items-center justify-between p-4 border rounded-lg"
             >
               <div className="flex-1">
                 <p className="font-medium">{transaction.category}</p>
@@ -86,7 +92,7 @@ export function TransactionList({
                 )}
 
                 <p className="text-xs text-muted-foreground mt-1">
-                  {formatDistanceToNow(new Date(transaction.date), {
+                  {formatDistanceToNow(new Date(transaction.created_at), {
                     addSuffix: true,
                   })}
                 </p>
@@ -94,29 +100,20 @@ export function TransactionList({
 
               <div className="flex items-center gap-3">
                 <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'}>
-                  {transaction.type === 'income' ? '+' : '-'}
-                  {formatCurrency(transaction.amount)}
+                  {transaction.type === 'income' ? '+' : '-'}Rp {transaction.amount.toLocaleString()}
                 </Badge>
 
-                {onEdit && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onEdit(transaction)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                )}
-
-                {onDelete && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onDelete(transaction.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+                {/* 🔐 Hanya creator bisa delete */}
+                {onDelete &&
+                  transaction.created_by === currentUserId && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onDelete(transaction.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
               </div>
             </div>
           ))}
