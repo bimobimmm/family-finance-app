@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+
 import { SavingsForm } from '@/components/savings/savings-form'
 import { SavingsList } from '@/components/savings/savings-list'
 import { Spinner } from '@/components/ui/spinner'
+import { Button } from '@/components/ui/button'
 
 export default function FamilySavingsPage() {
 
@@ -29,11 +32,16 @@ export default function FamilySavingsPage() {
       return
     }
 
-    const { data: member } = await supabase
+    // 🔹 SAFE QUERY (tidak pakai .single())
+    const { data: member, error } = await supabase
       .from('family_members')
       .select('family_id')
       .eq('user_id', session.user.id)
-      .single()
+      .maybeSingle()
+
+    if (error) {
+      console.error('Family membership error:', error)
+    }
 
     if (!member) {
       router.push('/family-hub')
@@ -48,19 +56,26 @@ export default function FamilySavingsPage() {
   }
 
   async function loadTargets(fid: string) {
-    const { data } = await supabase
+
+    const { data, error } = await supabase
       .from('savings_targets')
       .select('*')
       .eq('family_id', fid)
       .eq('scope', 'family')
       .order('created_at', { ascending: false })
 
+    if (error) {
+      console.error('Error loading family savings:', error)
+    }
+
     setTargets(data || [])
   }
 
   async function handleAdd(formData: any) {
 
-    await supabase.from('savings_targets').insert([
+    if (!familyId) return
+
+    const { error } = await supabase.from('savings_targets').insert([
       {
         family_id: familyId,
         scope: 'family',
@@ -71,42 +86,77 @@ export default function FamilySavingsPage() {
       },
     ])
 
-    await loadTargets(familyId!)
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    await loadTargets(familyId)
   }
 
   async function handleDelete(id: string) {
-    await supabase
+
+    if (!familyId) return
+
+    const { error } = await supabase
       .from('savings_targets')
       .delete()
       .eq('id', id)
 
-    await loadTargets(familyId!)
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    await loadTargets(familyId)
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Spinner className="h-8 w-8" />
       </div>
     )
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="min-h-screen bg-background">
 
-      {/* FORM */}
-      <div className="lg:col-span-1">
-        <SavingsForm onSubmit={handleAdd} />
+      {/* HEADER */}
+      <div className="border-b border-border bg-card">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Family Savings</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage shared savings goals
+            </p>
+          </div>
+
+          <Link href="/family-hub">
+            <Button variant="outline">
+              Back to Family Hub
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* LIST */}
-      <div className="lg:col-span-2">
-        <SavingsList
-          targets={targets}
-          onDelete={handleDelete}
-        />
-      </div>
+      {/* CONTENT */}
+      <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
 
+        {/* FORM */}
+        <div className="lg:col-span-1">
+          <SavingsForm onSubmit={handleAdd} />
+        </div>
+
+        {/* LIST */}
+        <div className="lg:col-span-2">
+          <SavingsList
+            targets={targets}
+            onDelete={handleDelete}
+          />
+        </div>
+
+      </div>
     </div>
   )
 }
