@@ -41,12 +41,16 @@ export default function FamilyHubPage() {
       return
     }
 
-    // 🔹 ambil family id user
-    const { data: member } = await supabase
+    // 🔹 FIX DI SINI
+    const { data: member, error } = await supabase
       .from('family_members')
       .select('family_id')
       .eq('user_id', session.user.id)
-      .single()
+      .maybeSingle()
+
+    if (error) {
+      console.error('Family membership error:', error)
+    }
 
     if (!member) {
       setLoading(false)
@@ -62,7 +66,7 @@ export default function FamilyHubPage() {
 
   async function loadFamily(familyId: string) {
 
-    // 🔹 load family members
+    // 🔹 load members
     const { data: familyMembers } = await supabase
       .from('family_members')
       .select('*')
@@ -148,6 +152,7 @@ export default function FamilyHubPage() {
       {/* HEADER */}
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
+
           <div>
             <h1 className="text-3xl font-bold">Family Hub</h1>
             <p className="text-muted-foreground mt-1">
@@ -155,14 +160,15 @@ export default function FamilyHubPage() {
             </p>
           </div>
 
-          <Link href="/family-settings">
-  <Button variant="outline">
-    Family Settings
-  </Button>
-</Link>
-
           <div className="flex items-center gap-4">
-            {/* FAMILY MEMBERS AVATAR */}
+
+            <Link href="/family-settings">
+              <Button variant="outline">
+                Family Settings
+              </Button>
+            </Link>
+
+            {/* MEMBER AVATAR */}
             <div className="flex -space-x-2">
               {members.map((m, i) => (
                 <div
@@ -181,11 +187,10 @@ export default function FamilyHubPage() {
                 Personal
               </Button>
             </Link>
+
           </div>
         </div>
       </div>
-
-      
 
       {/* CONTENT */}
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
