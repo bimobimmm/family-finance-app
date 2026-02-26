@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { SavingsForm } from '@/components/savings/savings-form'
 import { SavingsList } from '@/components/savings/savings-list'
 import { ArrowLeft } from 'lucide-react'
+import { writeActivityLog } from '@/lib/activity-log'
 
 export default function SavingsPage() {
   const router = useRouter()
@@ -71,23 +72,40 @@ export default function SavingsPage() {
   }
 
   async function handleAddTarget(formData: any) {
+    if (!user) return
+
     setSubmitting(true)
 
     try {
-      const { error } = await supabase.from('savings_targets').insert([
-        {
-          user_id: user.id,
-          name: formData.name,
-          target_amount: parseFloat(formData.targetAmount),
-          current_amount: parseFloat(formData.currentAmount),
-          due_date: formData.dueDate || null,
-          notes: formData.notes,
-          scope: scope,
+      const payload = {
+        user_id: user.id,
+        name: formData.name,
+        target_amount: parseFloat(formData.targetAmount),
+        current_amount: parseFloat(formData.currentAmount),
+        due_date: formData.dueDate || null,
+        notes: formData.notes,
+        scope: scope,
+        family_id: scope === 'family' ? familyId : null,
+        created_by: user.id,
+        created_at: new Date().toISOString(),
+      }
+
+      const { data, error } = await supabase.from('savings_targets').insert([
+        payload,
+      ]).select('*').maybeSingle()
+
+      if (!error && data?.id) {
+        await writeActivityLog(supabase, {
+          actor_user_id: user.id,
+          action: 'create',
+          entity_type: 'savings_target',
+          entity_id: data.id,
+          scope,
+          target_user_id: scope === 'personal' ? user.id : null,
           family_id: scope === 'family' ? familyId : null,
-          created_by: user.id,
-          created_at: new Date().toISOString(),
-        },
-      ])
+          note: `${data.name} target Rp ${Number(data.target_amount || 0).toLocaleString('id-ID')}`,
+        })
+      }
 
       if (!error) {
         await loadTargets(
@@ -101,7 +119,28 @@ export default function SavingsPage() {
   }
 
   async function handleDeleteTarget(id: string) {
+    if (!user) return
+
+    const { data: existing } = await supabase
+      .from('savings_targets')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
     await supabase.from('savings_targets').delete().eq('id', id)
+
+    await writeActivityLog(supabase, {
+      actor_user_id: user.id,
+      action: 'delete',
+      entity_type: 'savings_target',
+      entity_id: id,
+      scope,
+      target_user_id: scope === 'personal' ? user.id : null,
+      family_id: scope === 'family' ? familyId : null,
+      note: existing
+        ? `${existing.name} target Rp ${Number(existing.target_amount || 0).toLocaleString('id-ID')}`
+        : 'Savings target deleted',
+    })
 
     await loadTargets(
       user.id,

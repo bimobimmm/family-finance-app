@@ -207,7 +207,7 @@ export default function FamilyHubPage() {
           <CategoryBreakdown transactions={transactions} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
           <Link href="/family-transactions">
             <div className="p-6 border border-border rounded-lg hover:bg-accent transition-colors cursor-pointer">
@@ -227,6 +227,17 @@ export default function FamilyHubPage() {
               </h3>
               <p className="text-sm text-muted-foreground">
                 Manage shared savings goals
+              </p>
+            </div>
+          </Link>
+
+          <Link href="/family-summary">
+            <div className="p-6 border border-border rounded-lg hover:bg-accent transition-colors cursor-pointer">
+              <h3 className="font-semibold text-lg mb-1">
+                Family Summary
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Monthly report and family history changes
               </p>
             </div>
           </Link>

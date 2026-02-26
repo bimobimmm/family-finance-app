@@ -2,17 +2,23 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { TransactionList } from '@/components/transactions/transaction-list'
 import { Spinner } from '@/components/ui/spinner'
+import { ArrowLeft } from 'lucide-react'
+import { writeActivityLog } from '@/lib/activity-log'
 
 export default function FamilyTransactionsPage() {
 
   const supabase = createClient()
   const router = useRouter()
 
+  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
   const [transactions, setTransactions] = useState<any[]>([])
   const [familyId, setFamilyId] = useState<string | null>(null)
 
@@ -28,6 +34,8 @@ export default function FamilyTransactionsPage() {
       router.push('/login')
       return
     }
+
+    setUser(session.user)
 
     const { data: member } = await supabase
       .from('family_members')
@@ -59,29 +67,74 @@ export default function FamilyTransactionsPage() {
   }
 
   async function handleAdd(formData: any) {
+    if (!familyId || !user) return
 
-    await supabase.from('transactions').insert([
-      {
+    setSubmitting(true)
+
+    try {
+      const payload = {
+        user_id: user.id,
         family_id: familyId,
         scope: 'family',
         type: formData.type,
         amount: parseFloat(formData.amount),
         category: formData.category,
         description: formData.description,
+        created_by: user.id,
         created_at: new Date().toISOString(),
-      },
-    ])
+      }
 
-    await loadTransactions(familyId!)
+      const { data, error } = await supabase.from('transactions').insert([
+        payload,
+      ]).select('*').maybeSingle()
+
+      if (!error && data?.id) {
+        await writeActivityLog(supabase, {
+          actor_user_id: user.id,
+          action: 'create',
+          entity_type: 'transaction',
+          entity_id: data.id,
+          scope: 'family',
+          family_id: familyId,
+          note: `${data.type} ${data.category} Rp ${Number(data.amount || 0).toLocaleString('id-ID')}`,
+        })
+      }
+
+      if (!error) {
+        await loadTransactions(familyId)
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleDelete(id: string) {
+    if (!familyId || !user) return
+
+    const { data: existing } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
     await supabase
       .from('transactions')
       .delete()
       .eq('id', id)
 
-    await loadTransactions(familyId!)
+    await writeActivityLog(supabase, {
+      actor_user_id: user.id,
+      action: 'delete',
+      entity_type: 'transaction',
+      entity_id: id,
+      scope: 'family',
+      family_id: familyId,
+      note: existing
+        ? `${existing.type} ${existing.category} Rp ${Number(existing.amount || 0).toLocaleString('id-ID')}`
+        : 'Transaction deleted',
+    })
+
+    await loadTransactions(familyId)
   }
 
   if (loading) {
@@ -93,21 +146,40 @@ export default function FamilyTransactionsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="min-h-screen bg-background">
+      <div className="border-b bg-card">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center gap-4">
+          <Link href="/family-hub">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
 
-      {/* FORM */}
-      <div className="lg:col-span-1">
-        <TransactionForm onSubmit={handleAdd} />
+          <div>
+            <h1 className="text-3xl font-bold">Family Transactions</h1>
+            <p>Manage shared income and expenses</p>
+          </div>
+        </div>
       </div>
 
-      {/* LIST */}
-      <div className="lg:col-span-2">
-        <TransactionList
-          transactions={transactions}
-          onDelete={handleDelete}
-        />
-      </div>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div>
+            <TransactionForm
+              onSubmit={handleAdd}
+              loading={submitting}
+            />
+          </div>
 
+          <div className="lg:col-span-2">
+            <TransactionList
+              transactions={transactions}
+              onDelete={handleDelete}
+              currentUserId={user?.id}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

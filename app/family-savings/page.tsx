@@ -4,18 +4,20 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-
+import { Button } from '@/components/ui/button'
 import { SavingsForm } from '@/components/savings/savings-form'
 import { SavingsList } from '@/components/savings/savings-list'
 import { Spinner } from '@/components/ui/spinner'
-import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
+import { writeActivityLog } from '@/lib/activity-log'
 
 export default function FamilySavingsPage() {
-
   const supabase = createClient()
   const router = useRouter()
 
+  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
   const [targets, setTargets] = useState<any[]>([])
   const [familyId, setFamilyId] = useState<string | null>(null)
 
@@ -24,7 +26,6 @@ export default function FamilySavingsPage() {
   }, [])
 
   async function init() {
-
     const { data: { session } } = await supabase.auth.getSession()
 
     if (!session) {
@@ -32,7 +33,8 @@ export default function FamilySavingsPage() {
       return
     }
 
-    // 🔹 SAFE QUERY (tidak pakai .single())
+    setUser(session.user)
+
     const { data: member, error } = await supabase
       .from('family_members')
       .select('family_id')
@@ -49,14 +51,11 @@ export default function FamilySavingsPage() {
     }
 
     setFamilyId(member.family_id)
-
     await loadTargets(member.family_id)
-
     setLoading(false)
   }
 
   async function loadTargets(fid: string) {
-
     const { data, error } = await supabase
       .from('savings_targets')
       .select('*')
@@ -72,31 +71,59 @@ export default function FamilySavingsPage() {
   }
 
   async function handleAdd(formData: any) {
+    if (!familyId || !user) return
 
-    if (!familyId) return
+    setSubmitting(true)
 
-    const { error } = await supabase.from('savings_targets').insert([
-      {
+    try {
+      const payload = {
+        user_id: user.id,
         family_id: familyId,
         scope: 'family',
         name: formData.name,
         target_amount: parseFloat(formData.targetAmount),
         current_amount: parseFloat(formData.currentAmount),
+        due_date: formData.dueDate || null,
+        notes: formData.notes,
+        created_by: user.id,
         created_at: new Date().toISOString(),
-      },
-    ])
+      }
 
-    if (error) {
-      alert(error.message)
-      return
+      const { data, error } = await supabase.from('savings_targets').insert([
+        payload,
+      ]).select('*').maybeSingle()
+
+      if (!error && data?.id) {
+        await writeActivityLog(supabase, {
+          actor_user_id: user.id,
+          action: 'create',
+          entity_type: 'savings_target',
+          entity_id: data.id,
+          scope: 'family',
+          family_id: familyId,
+          note: `${data.name} target Rp ${Number(data.target_amount || 0).toLocaleString('id-ID')}`,
+        })
+      }
+
+      if (error) {
+        alert(error.message)
+        return
+      }
+
+      await loadTargets(familyId)
+    } finally {
+      setSubmitting(false)
     }
-
-    await loadTargets(familyId)
   }
 
   async function handleDelete(id: string) {
+    if (!familyId || !user) return
 
-    if (!familyId) return
+    const { data: existing } = await supabase
+      .from('savings_targets')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
 
     const { error } = await supabase
       .from('savings_targets')
@@ -107,6 +134,18 @@ export default function FamilySavingsPage() {
       alert(error.message)
       return
     }
+
+    await writeActivityLog(supabase, {
+      actor_user_id: user.id,
+      action: 'delete',
+      entity_type: 'savings_target',
+      entity_id: id,
+      scope: 'family',
+      family_id: familyId,
+      note: existing
+        ? `${existing.name} target Rp ${Number(existing.target_amount || 0).toLocaleString('id-ID')}`
+        : 'Savings target deleted',
+    })
 
     await loadTargets(familyId)
   }
@@ -121,41 +160,38 @@ export default function FamilySavingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-
-      {/* HEADER */}
-      <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Family Savings</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage shared savings goals
-            </p>
-          </div>
-
+      <div className="border-b bg-card">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center gap-4">
           <Link href="/family-hub">
-            <Button variant="outline">
-              Back to Family Hub
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
+
+          <div>
+            <h1 className="text-3xl font-bold">Family Savings</h1>
+            <p>Manage shared savings goals</p>
+          </div>
         </div>
       </div>
 
-      {/* CONTENT */}
-      <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div>
+            <SavingsForm
+              onSubmit={handleAdd}
+              loading={submitting}
+            />
+          </div>
 
-        {/* FORM */}
-        <div className="lg:col-span-1">
-          <SavingsForm onSubmit={handleAdd} />
+          <div className="lg:col-span-2">
+            <SavingsList
+              targets={targets}
+              onDelete={handleDelete}
+              currentUserId={user?.id}
+            />
+          </div>
         </div>
-
-        {/* LIST */}
-        <div className="lg:col-span-2">
-          <SavingsList
-            targets={targets}
-            onDelete={handleDelete}
-          />
-        </div>
-
       </div>
     </div>
   )

@@ -25,6 +25,11 @@ export default function DashboardPage() {
   const [monthlySpending, setMonthlySpending] = useState(0)
   const [savingsTarget, setSavingsTarget] = useState(0)
   const [savingsProgress, setSavingsProgress] = useState(0)
+  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+  const isAdmin = adminEmails.includes((user?.email || '').toLowerCase())
 
   useEffect(() => {
     init()
@@ -129,6 +134,14 @@ export default function DashboardPage() {
           <div className="flex gap-2 items-center">
             <ThemeToggle />
 
+            {isAdmin && (
+              <Link href="/admin">
+                <Button variant="outline">
+                  Admin
+                </Button>
+              </Link>
+            )}
+
             <Link href="/family-hub">
               <Button variant="outline">
                 Family Hub
@@ -160,7 +173,7 @@ export default function DashboardPage() {
         </div>
 
         {/* QUICK ACTION CARDS (RESTORED) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
           <Link href="/transactions">
             <div className="p-6 border border-border rounded-lg hover:bg-accent transition-colors cursor-pointer">
@@ -180,6 +193,17 @@ export default function DashboardPage() {
               </h3>
               <p className="text-sm text-muted-foreground">
                 Create and manage your savings targets
+              </p>
+            </div>
+          </Link>
+
+          <Link href="/summary">
+            <div className="p-6 border border-border rounded-lg hover:bg-accent transition-colors cursor-pointer">
+              <h3 className="font-semibold text-lg mb-1">
+                Summary
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Monthly report and personal history changes
               </p>
             </div>
           </Link>

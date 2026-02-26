@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { TransactionList } from '@/components/transactions/transaction-list'
 import { ArrowLeft } from 'lucide-react'
+import { writeActivityLog } from '@/lib/activity-log'
 
 export default function TransactionsPage() {
   const router = useRouter()
@@ -70,22 +71,39 @@ export default function TransactionsPage() {
   }
 
   async function handleAddTransaction(formData: any) {
+    if (!user) return
+
     setSubmitting(true)
 
     try {
-      const { error } = await supabase.from('transactions').insert([
-        {
-          user_id: user.id,
-          type: formData.type,
-          amount: parseFloat(formData.amount),
-          category: formData.category,
-          description: formData.description,
-          scope: scope,
+      const payload = {
+        user_id: user.id,
+        type: formData.type,
+        amount: parseFloat(formData.amount),
+        category: formData.category,
+        description: formData.description,
+        scope: scope,
+        family_id: scope === 'family' ? familyId : null,
+        created_by: user.id,
+        created_at: new Date().toISOString(),
+      }
+
+      const { data, error } = await supabase.from('transactions').insert([
+        payload,
+      ]).select('*').maybeSingle()
+
+      if (!error && data?.id) {
+        await writeActivityLog(supabase, {
+          actor_user_id: user.id,
+          action: 'create',
+          entity_type: 'transaction',
+          entity_id: data.id,
+          scope,
+          target_user_id: scope === 'personal' ? user.id : null,
           family_id: scope === 'family' ? familyId : null,
-          created_by: user.id,
-          created_at: new Date().toISOString(),
-        },
-      ])
+          note: `${data.type} ${data.category} Rp ${Number(data.amount || 0).toLocaleString('id-ID')}`,
+        })
+      }
 
       if (!error) {
         await loadTransactions(
@@ -99,7 +117,28 @@ export default function TransactionsPage() {
   }
 
   async function handleDeleteTransaction(id: string) {
+    if (!user) return
+
+    const { data: existing } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
     await supabase.from('transactions').delete().eq('id', id)
+
+    await writeActivityLog(supabase, {
+      actor_user_id: user.id,
+      action: 'delete',
+      entity_type: 'transaction',
+      entity_id: id,
+      scope,
+      target_user_id: scope === 'personal' ? user.id : null,
+      family_id: scope === 'family' ? familyId : null,
+      note: existing
+        ? `${existing.type} ${existing.category} Rp ${Number(existing.amount || 0).toLocaleString('id-ID')}`
+        : 'Transaction deleted',
+    })
 
     await loadTransactions(
       user.id,
