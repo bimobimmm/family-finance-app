@@ -177,31 +177,22 @@ export default function FamilyTransactionsPage() {
   }
 
   async function showFamilySavingWarning(fid: string) {
-    const { data: trx } = await supabase
-      .from('transactions')
-      .select('type, amount')
-      .eq('scope', 'family')
-      .eq('family_id', fid)
-
     const { data: savings } = await supabase
       .from('savings_targets')
-      .select('target_amount')
+      .select('target_amount, current_amount')
       .eq('scope', 'family')
       .eq('family_id', fid)
-
-    let balance = 0
-    ;(trx || []).forEach((t: any) => {
-      const amount = Number(t.amount || 0)
-      if (t.type === 'income') balance += amount
-      if (t.type === 'expense') balance -= amount
-    })
 
     const target = (savings || []).reduce(
       (sum: number, s: any) => sum + Number(s.target_amount || 0),
       0,
     )
+    const current = (savings || []).reduce(
+      (sum: number, s: any) => sum + Number(s.current_amount || 0),
+      0,
+    )
 
-    const warning = getSavingWarning(balance, target)
+    const warning = getSavingWarning(current, target)
     if (warning) alert(warning)
   }
 

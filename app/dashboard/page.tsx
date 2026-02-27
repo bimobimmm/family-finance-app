@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [totalBalance, setTotalBalance] = useState(0)
   const [monthlySpending, setMonthlySpending] = useState(0)
   const [savingsTarget, setSavingsTarget] = useState(0)
+  const [savingsCurrent, setSavingsCurrent] = useState(0)
   const [savingsProgress, setSavingsProgress] = useState(0)
   const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
     .split(',')
@@ -65,15 +66,17 @@ export default function DashboardPage() {
     const now = new Date()
 
     trx?.forEach((t: any) => {
-      if (t.type === 'income') balance += t.amount
-      else balance -= t.amount
+      const d = new Date(t.created_at)
+      const isCurrentMonth =
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
 
-      if (t.type === 'expense') {
-        const d = new Date(t.created_at)
-        if (
-          d.getMonth() === now.getMonth() &&
-          d.getFullYear() === now.getFullYear()
-        ) {
+      if (t.type === 'income') {
+        balance += t.amount
+      } else {
+        balance -= t.amount
+
+        if (isCurrentMonth) {
           monthExpense += t.amount
         }
       }
@@ -98,6 +101,7 @@ export default function DashboardPage() {
     })
 
     setSavingsTarget(totalTarget)
+    setSavingsCurrent(totalCurrent)
 
     setSavingsProgress(
       totalTarget > 0
@@ -172,6 +176,7 @@ export default function DashboardPage() {
           totalBalance={totalBalance}
           monthlySpending={monthlySpending}
           savingsTarget={savingsTarget}
+          savingsCurrent={savingsCurrent}
           savingsProgress={savingsProgress}
         />
 

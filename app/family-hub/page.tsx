@@ -27,6 +27,7 @@ export default function FamilyHubPage() {
   const [totalBalance, setTotalBalance] = useState(0)
   const [monthlySpending, setMonthlySpending] = useState(0)
   const [savingsTarget, setSavingsTarget] = useState(0)
+  const [savingsCurrent, setSavingsCurrent] = useState(0)
   const [savingsProgress, setSavingsProgress] = useState(0)
 
   useEffect(() => {
@@ -89,16 +90,17 @@ export default function FamilyHubPage() {
     const now = new Date()
 
     trx?.forEach((t: any) => {
+      const d = new Date(t.created_at)
+      const isCurrentMonth =
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
 
-      if (t.type === 'income') balance += t.amount
-      else balance -= t.amount
+      if (t.type === 'income') {
+        balance += t.amount
+      } else {
+        balance -= t.amount
 
-      if (t.type === 'expense') {
-        const d = new Date(t.created_at)
-        if (
-          d.getMonth() === now.getMonth() &&
-          d.getFullYear() === now.getFullYear()
-        ) {
+        if (isCurrentMonth) {
           monthExpense += t.amount
         }
       }
@@ -123,6 +125,7 @@ export default function FamilyHubPage() {
     })
 
     setSavingsTarget(totalTarget)
+    setSavingsCurrent(totalCurrent)
 
     setSavingsProgress(
       totalTarget > 0
@@ -206,6 +209,7 @@ export default function FamilyHubPage() {
           totalBalance={totalBalance}
           monthlySpending={monthlySpending}
           savingsTarget={savingsTarget}
+          savingsCurrent={savingsCurrent}
           savingsProgress={savingsProgress}
         />
 
