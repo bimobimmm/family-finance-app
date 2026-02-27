@@ -11,6 +11,7 @@ import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { CategoryBreakdown } from '@/components/dashboard/category-breakdown'
 import { TransactionNotesCard } from '@/components/dashboard/transaction-notes-card'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { parseAppDate } from '@/lib/date'
 import {
   FileText,
   Users,
@@ -217,7 +218,7 @@ export default function DashboardPage() {
     const now = new Date()
 
     trx?.forEach((row: any) => {
-      const date = new Date(row.created_at)
+      const date = parseAppDate(row.created_at)
       const isCurrentMonth =
         date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
 

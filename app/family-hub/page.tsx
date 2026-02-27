@@ -12,6 +12,7 @@ import { CategoryBreakdown } from '@/components/dashboard/category-breakdown'
 import { TransactionNotesCard } from '@/components/dashboard/transaction-notes-card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { FileText, UserRound, Shield, Home, HeartPulse } from 'lucide-react'
+import { parseAppDate } from '@/lib/date'
 
 type Language = 'id' | 'en'
 type FamilySection = 'overview' | 'analytics'
@@ -205,7 +206,7 @@ export default function FamilyHubPage() {
     const now = new Date()
 
     ;(trx || []).forEach((row: any) => {
-      const date = new Date(row.created_at)
+      const date = parseAppDate(row.created_at)
       const isCurrentMonth =
         date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
 

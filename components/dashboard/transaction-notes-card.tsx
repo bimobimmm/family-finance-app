@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
+import { parseAppDate } from '@/lib/date'
 
 interface Props {
   transactions: any[]
@@ -37,7 +38,7 @@ export function TransactionNotesCard({ transactions, title, language = 'id', lab
     startDate.setDate(startDate.getDate() - rangeDays + 1)
 
     return transactions.filter((item) => {
-      const d = new Date(item.created_at)
+      const d = parseAppDate(item.created_at)
       if (Number.isNaN(d.getTime())) return false
       return d >= startDate && d <= today
     })
@@ -65,7 +66,7 @@ export function TransactionNotesCard({ transactions, title, language = 'id', lab
   }, [dateFiltered, typeFilter])
 
   const sorted = [...filtered]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => parseAppDate(b.created_at).getTime() - parseAppDate(a.created_at).getTime())
     .slice(0, 12)
 
   return (
@@ -161,7 +162,7 @@ export function TransactionNotesCard({ transactions, title, language = 'id', lab
                       {item.description || item.category || '-'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(item.created_at).toLocaleString(language === 'en' ? 'en-US' : 'id-ID')}
+                      {parseAppDate(item.created_at).toLocaleString(language === 'en' ? 'en-US' : 'id-ID')}
                     </p>
                   </div>
                 </div>

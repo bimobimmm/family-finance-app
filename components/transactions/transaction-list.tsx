@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pencil, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { parseAppDate } from '@/lib/date'
 
 interface Transaction {
   id: string
@@ -95,7 +96,7 @@ export function TransactionList({
                 )}
 
                 <p className="text-xs text-muted-foreground mt-1">
-                  {formatDistanceToNow(new Date(transaction.created_at), {
+                  {formatDistanceToNow(parseAppDate(transaction.created_at), {
                     addSuffix: true,
                   })}
                 </p>

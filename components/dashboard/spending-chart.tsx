@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { localDateKey, parseAppDate } from '@/lib/date'
 
 interface Props {
   transactions: any[]
@@ -41,13 +42,13 @@ export function SpendingChart({ transactions, language = 'id', labels }: Props) 
     transactions.forEach((t) => {
       if (t.type !== 'expense') return
 
-      const date = new Date(t.created_at)
+      const date = parseAppDate(t.created_at)
       if (Number.isNaN(date.getTime())) return
 
       date.setHours(0, 0, 0, 0)
       if (date < startDate || date > today) return
 
-      const key = date.toISOString().slice(0, 10)
+      const key = localDateKey(date)
       daily[key] = (daily[key] || 0) + Number(t.amount)
     })
 
@@ -55,7 +56,7 @@ export function SpendingChart({ transactions, language = 'id', labels }: Props) 
     for (let i = 0; i < rangeDays; i += 1) {
       const currentDate = new Date(startDate)
       currentDate.setDate(startDate.getDate() + i)
-      const key = currentDate.toISOString().slice(0, 10)
+      const key = localDateKey(currentDate)
 
       rows.push({
         date: key,
@@ -140,4 +141,3 @@ export function SpendingChart({ transactions, language = 'id', labels }: Props) 
     </Card>
   )
 }
-
