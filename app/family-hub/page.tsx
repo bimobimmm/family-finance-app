@@ -60,6 +60,8 @@ const COPY = {
       empty: 'Belum ada catatan transaksi untuk filter ini.',
       incomeFallback: 'Pemasukan',
       expenseFallback: 'Pengeluaran',
+      userFilterAll: 'Semua User',
+      userFilterLabel: 'Filter User',
     },
     actions: {
       report: 'Laporan',
@@ -116,6 +118,8 @@ const COPY = {
       empty: 'No transaction notes for this filter.',
       incomeFallback: 'Income',
       expenseFallback: 'Expense',
+      userFilterAll: 'All Users',
+      userFilterLabel: 'Filter User',
     },
     actions: {
       report: 'Reports',

@@ -67,6 +67,13 @@ function formatCurrency(value: number) {
   return `Rp ${new Intl.NumberFormat('id-ID').format(value || 0)}`
 }
 
+function formatDateTime(value?: string) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleString('id-ID')
+}
+
 function formatCellValue(value: unknown) {
   if (value === null || value === undefined) return '-'
   if (typeof value === 'string') {
@@ -133,6 +140,8 @@ export default function AdminDashboardPage() {
   const [overview, setOverview] = useState<OverviewPayload | null>(null)
   const [selectedTable, setSelectedTable] = useState<string>('transactions')
   const [tableData, setTableData] = useState<TablePayload | null>(null)
+  const [selectedTransactionUser, setSelectedTransactionUser] = useState<string>('all')
+  const [selectedSavingsUser, setSelectedSavingsUser] = useState<string>('all')
   const [editingRow, setEditingRow] = useState<any | null>(null)
   const [editValues, setEditValues] = useState<Record<string, string>>({})
   const [savingEdit, setSavingEdit] = useState(false)
@@ -142,8 +151,65 @@ export default function AdminDashboardPage() {
     [tableData?.rows],
   )
 
+  const userLabelById = useMemo(() => {
+    const map = new Map<string, string>()
+    ;(overview?.registeredUsers || []).forEach((row) => {
+      map.set(row.id, row.email || `User ${row.id.slice(0, 8)}`)
+    })
+    return map
+  }, [overview?.registeredUsers])
+
+  const recentTransactionsByUser = useMemo(() => {
+    const grouped = new Map<string, any[]>()
+    ;(overview?.recentTransactions || []).forEach((row: any) => {
+      const ownerId = row.user_id || 'unknown'
+      const rows = grouped.get(ownerId) || []
+      rows.push(row)
+      grouped.set(ownerId, rows)
+    })
+
+    return Array.from(grouped.entries()).map(([ownerId, rows]) => ({
+      ownerId,
+      ownerLabel:
+        userLabelById.get(ownerId) ||
+        (ownerId === 'unknown' ? 'User tidak diketahui' : `User ${ownerId.slice(0, 8)}`),
+      rows,
+    }))
+  }, [overview?.recentTransactions, userLabelById])
+
+  const transactionUserOptions = useMemo(() => {
+    return recentTransactionsByUser.map((group) => ({
+      id: group.ownerId,
+      label: group.ownerLabel,
+    }))
+  }, [recentTransactionsByUser])
+
+  const visibleTransactionsByUser = useMemo(() => {
+    if (selectedTransactionUser === 'all') return recentTransactionsByUser
+    return recentTransactionsByUser.filter((group) => group.ownerId === selectedTransactionUser)
+  }, [recentTransactionsByUser, selectedTransactionUser])
+
+  const savingsUserOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    ;(overview?.recentSavingsTargets || []).forEach((row: any) => {
+      if (!row.user_id) return
+      map.set(
+        row.user_id,
+        userLabelById.get(row.user_id) || `User ${String(row.user_id).slice(0, 8)}`,
+      )
+    })
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }))
+  }, [overview?.recentSavingsTargets, userLabelById])
+
+  const visibleSavingsTargets = useMemo(() => {
+    const rows = overview?.recentSavingsTargets || []
+    if (selectedSavingsUser === 'all') return rows
+    return rows.filter((row: any) => row.user_id === selectedSavingsUser)
+  }, [overview?.recentSavingsTargets, selectedSavingsUser])
+
   useEffect(() => {
     init()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function fetchAdminApi(path: string, init?: RequestInit) {
@@ -346,52 +412,35 @@ export default function AdminDashboardPage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Transactions</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-bold">
-                  {overview?.stats.transactions || 0}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Savings Targets</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-bold">
-                  {overview?.stats.savingsTargets || 0}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Families</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-bold">
-                  {overview?.stats.families || 0}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Family Members</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-bold">
-                  {overview?.stats.familyMembers || 0}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Registered Users</CardTitle>
-                </CardHeader>
-                <CardContent className="text-2xl font-bold">
-                  {overview?.stats.registeredUsers || 0}
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Data Hub (Ringkas)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Transactions</p>
+                    <p className="text-xl font-bold">{overview?.stats.transactions || 0}</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Savings Targets</p>
+                    <p className="text-xl font-bold">{overview?.stats.savingsTargets || 0}</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Families</p>
+                    <p className="text-xl font-bold">{overview?.stats.families || 0}</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Family Members</p>
+                    <p className="text-xl font-bold">{overview?.stats.familyMembers || 0}</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Registered Users</p>
+                    <p className="text-xl font-bold">{overview?.stats.registeredUsers || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
@@ -418,16 +467,44 @@ export default function AdminDashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Recent Transactions</CardTitle>
+                  <CardTitle className="text-base">Recent Transactions (Per User)</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {(overview?.recentTransactions || []).map((row: any) => (
-                    <div key={row.id} className="flex items-center justify-between text-sm border rounded-md px-3 py-2">
-                      <span>{row.category || '-'}</span>
-                      <span className="font-semibold">{formatCurrency(Number(row.amount || 0))}</span>
+                <CardContent className="space-y-4 max-h-96 overflow-y-auto hide-scrollbar">
+                  <div className="w-full sm:w-72">
+                    <Select value={selectedTransactionUser} onValueChange={setSelectedTransactionUser}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih user" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua user</SelectItem>
+                        {transactionUserOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {visibleTransactionsByUser.map((group) => (
+                    <div key={group.ownerId} className="border rounded-md p-3 space-y-2">
+                      <p className="text-sm font-semibold">{group.ownerLabel}</p>
+                      {group.rows.map((row: any) => (
+                        <div
+                          key={row.id}
+                          className="rounded-md bg-muted/40 px-3 py-2 text-xs sm:text-sm"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium">{row.category || row.type || 'Transaksi'}</span>
+                            <span className="font-semibold">{formatCurrency(Number(row.amount || 0))}</span>
+                          </div>
+                          <p className="text-muted-foreground mt-1">{row.description || 'Tanpa deskripsi'}</p>
+                          <p className="text-[11px] text-muted-foreground mt-1">{formatDateTime(row.created_at)}</p>
+                        </div>
+                      ))}
                     </div>
                   ))}
-                  {(overview?.recentTransactions || []).length === 0 && (
+                  {visibleTransactionsByUser.length === 0 && (
                     <p className="text-sm text-muted-foreground">No data</p>
                   )}
                 </CardContent>
@@ -435,38 +512,77 @@ export default function AdminDashboardPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Recent Savings Targets</CardTitle>
+                  <CardTitle className="text-base">Savings Targets (Per User)</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {(overview?.recentSavingsTargets || []).map((row: any) => (
-                    <div key={row.id} className="flex items-center justify-between text-sm border rounded-md px-3 py-2">
-                      <span>{row.name || '-'}</span>
-                      <span className="font-semibold">{formatCurrency(Number(row.target_amount || 0))}</span>
-                    </div>
-                  ))}
-                  {(overview?.recentSavingsTargets || []).length === 0 && (
-                    <p className="text-sm text-muted-foreground">No data</p>
-                  )}
+                <CardContent className="space-y-3">
+                  <div className="w-full sm:w-72">
+                    <Select value={selectedSavingsUser} onValueChange={setSelectedSavingsUser}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih user" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua user</SelectItem>
+                        {savingsUserOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {visibleSavingsTargets.map((row: any) => (
+                      <div key={row.id} className="flex items-start justify-between text-sm border rounded-md px-3 py-2 gap-3">
+                        <div>
+                          <p className="font-medium">{row.name || '-'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Pemilik:{' '}
+                            {userLabelById.get(row.user_id) ||
+                              (row.user_id ? `User ${String(row.user_id).slice(0, 8)}` : '-')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Update: {formatDateTime(row.updated_at || row.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">
+                            {formatCurrency(Number(row.current_amount || 0))}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            dari {formatCurrency(Number(row.target_amount || 0))}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {visibleSavingsTargets.length === 0 && (
+                      <p className="text-sm text-muted-foreground">Tidak ada data target tabungan.</p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Registered Emails</CardTitle>
+                <CardTitle className="text-base">
+                  Registered Emails ({overview?.stats.registeredUsers || 0})
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 max-h-72 overflow-y-auto">
                 {(overview?.registeredUsers || []).map((row) => (
                   <div
                     key={row.id}
-                    className="flex items-center justify-between text-sm border rounded-md px-3 py-2"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm border rounded-md px-3 py-3 gap-2 bg-muted/20"
                   >
-                    <span>{row.email || '-'}</span>
-                    <span className="text-muted-foreground">
-                      {row.created_at
-                        ? new Date(row.created_at).toLocaleDateString('id-ID')
-                        : '-'}
-                    </span>
+                    <div>
+                      <p className="font-medium">{row.email || '-'}</p>
+                      <p className="text-xs text-muted-foreground">ID: {row.id.slice(0, 8)}...</p>
+                    </div>
+                    <div className="text-xs text-muted-foreground sm:text-right">
+                      <p>Daftar: {formatDateTime(row.created_at)}</p>
+                      <p>Last sign in: {formatDateTime(row.last_sign_in_at)}</p>
+                    </div>
                   </div>
                 ))}
                 {(overview?.registeredUsers || []).length === 0 && (
@@ -520,7 +636,7 @@ export default function AdminDashboardPage() {
                     {(tableData?.rows || []).map((row: any) => (
                       <TableRow key={row.id || JSON.stringify(row)}>
                         {tableColumns.map((column) => (
-                          <TableCell key={`${row.id}-${column}`}>
+                          <TableCell key={`${row.id || 'no-id'}-${column}`}>
                             {formatCellValue(row[column])}
                           </TableCell>
                         ))}

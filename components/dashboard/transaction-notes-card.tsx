@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import { parseAppDate } from '@/lib/date'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface Props {
   transactions: any[]
@@ -22,12 +23,27 @@ interface Props {
     empty?: string
     incomeFallback?: string
     expenseFallback?: string
+    userFilterAll?: string
+    userFilterLabel?: string
   }
 }
 
 export function TransactionNotesCard({ transactions, title, language = 'id', labels }: Props) {
   const [rangeDays, setRangeDays] = useState<7 | 30>(7)
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
+  const [userFilter, setUserFilter] = useState<string>('all')
+
+  const userOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    transactions.forEach((item) => {
+      if (!item?.user_id) return
+      const id = String(item.user_id)
+      if (!map.has(id)) {
+        map.set(id, item.user_email || `User ${id.slice(0, 8)}`)
+      }
+    })
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }))
+  }, [transactions])
 
   const dateFiltered = useMemo(() => {
     const today = new Date()
@@ -61,9 +77,18 @@ export function TransactionNotesCard({ transactions, title, language = 'id', lab
   )
 
   const filtered = useMemo(() => {
-    if (typeFilter === 'all') return dateFiltered
-    return dateFiltered.filter((item) => item.type === typeFilter)
-  }, [dateFiltered, typeFilter])
+    let items = dateFiltered
+
+    if (typeFilter !== 'all') {
+      items = items.filter((item) => item.type === typeFilter)
+    }
+
+    if (userFilter !== 'all') {
+      items = items.filter((item) => String(item.user_id || '') === userFilter)
+    }
+
+    return items
+  }, [dateFiltered, typeFilter, userFilter])
 
   const sorted = [...filtered]
     .sort((a, b) => parseAppDate(b.created_at).getTime() - parseAppDate(a.created_at).getTime())
@@ -131,6 +156,27 @@ export function TransactionNotesCard({ transactions, title, language = 'id', lab
               {labels?.expense || 'Pengeluaran'}
             </Button>
           </div>
+
+          {userOptions.length > 1 && (
+            <div className="w-full sm:w-72">
+              <p className="text-xs text-muted-foreground mb-2">
+                {labels?.userFilterLabel || 'Filter User'}
+              </p>
+              <Select value={userFilter} onValueChange={setUserFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder={labels?.userFilterLabel || 'Filter User'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{labels?.userFilterAll || 'Semua User'}</SelectItem>
+                  {userOptions.map((opt) => (
+                    <SelectItem key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-3 max-h-[420px] overflow-auto hide-scrollbar">
