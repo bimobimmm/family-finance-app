@@ -12,6 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface Props {
   transactions: any[]
+  labels?: {
+    title?: string
+    noData?: string
+    total?: string
+  }
 }
 
 const COLORS = [
@@ -24,7 +29,7 @@ const COLORS = [
   '#8b5cf6',
 ]
 
-export function CategoryBreakdown({ transactions }: Props) {
+export function CategoryBreakdown({ transactions, labels }: Props) {
   const data = useMemo(() => {
     const categories: Record<string, number> = {}
 
@@ -47,13 +52,13 @@ export function CategoryBreakdown({ transactions }: Props) {
   return (
     <Card className="overflow-hidden">
       <CardHeader>
-        <CardTitle>Spending by Category</CardTitle>
+        <CardTitle>{labels?.title || 'Spending by Category'}</CardTitle>
       </CardHeader>
 
       <CardContent className="h-[300px]">
         {data.length === 0 ? (
           <div className="flex h-full items-center justify-center rounded-xl border border-dashed text-muted-foreground">
-            No category data
+            {labels?.noData || 'No category data'}
           </div>
         ) : (
           <div className="grid h-full grid-cols-1 gap-4 md:grid-cols-[1fr_180px]">
@@ -95,7 +100,7 @@ export function CategoryBreakdown({ transactions }: Props) {
 
             <div className="space-y-2 overflow-auto pr-1">
               <p className="text-sm font-semibold">
-                Total: Rp {total.toLocaleString('id-ID')}
+                {labels?.total || 'Total'}: Rp {total.toLocaleString('id-ID')}
               </p>
               {data.map((row, i) => (
                 <div key={row.name} className="flex items-center justify-between gap-2 text-xs">

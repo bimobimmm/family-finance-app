@@ -13,6 +13,15 @@ interface Props {
   savingsTarget: number
   savingsCurrent?: number
   savingsProgress?: number
+  labels?: {
+    totalBalance?: string
+    monthlySpending?: string
+    currentSaving?: string
+    savingsTarget?: string
+    savingWarningTitle?: string
+    currentSavingHint?: string
+    completedSuffix?: string
+  }
 }
 
 export function OverviewCards({
@@ -21,6 +30,7 @@ export function OverviewCards({
   savingsTarget,
   savingsCurrent = 0,
   savingsProgress = 0,
+  labels,
 }: Props) {
   const savingsWarning = getSavingWarning(savingsCurrent, savingsTarget)
 
@@ -29,7 +39,7 @@ export function OverviewCards({
 
       <Card>
         <CardHeader className="flex justify-between">
-          <CardTitle>Total Balance</CardTitle>
+          <CardTitle>{labels?.totalBalance || 'Total Balance'}</CardTitle>
           <Wallet className="text-blue-500" />
         </CardHeader>
         <CardContent>
@@ -40,7 +50,7 @@ export function OverviewCards({
           {savingsWarning && (
             <Alert variant="destructive" className="mt-3">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Peringatan Saving</AlertTitle>
+              <AlertTitle>{labels?.savingWarningTitle || 'Peringatan Saving'}</AlertTitle>
               <AlertDescription>
                 {savingsWarning}
               </AlertDescription>
@@ -51,7 +61,7 @@ export function OverviewCards({
 
       <Card>
         <CardHeader className="flex justify-between">
-          <CardTitle>Monthly Spending</CardTitle>
+          <CardTitle>{labels?.monthlySpending || 'Monthly Spending'}</CardTitle>
           <TrendingUp className="text-red-500" />
         </CardHeader>
         <CardContent>
@@ -63,7 +73,7 @@ export function OverviewCards({
 
       <Card>
         <CardHeader className="flex justify-between">
-          <CardTitle>Tabungan Saat Ini</CardTitle>
+          <CardTitle>{labels?.currentSaving || 'Tabungan Saat Ini'}</CardTitle>
           <PiggyBank className="text-emerald-500" />
         </CardHeader>
         <CardContent>
@@ -71,14 +81,14 @@ export function OverviewCards({
             {formatCurrency(savingsCurrent)}
           </div>
           <p className="text-xs mt-1 text-muted-foreground">
-            Diambil dari input Saving Plan (current amount)
+            {labels?.currentSavingHint || 'Diambil dari input Saving Plan (current amount)'}
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex justify-between">
-          <CardTitle>Savings Target</CardTitle>
+          <CardTitle>{labels?.savingsTarget || 'Savings Target'}</CardTitle>
           <Target className="text-green-500" />
         </CardHeader>
         <CardContent>
@@ -89,7 +99,7 @@ export function OverviewCards({
           <div className="mt-3">
             <Progress value={savingsProgress} className="h-2" />
             <p className="text-xs mt-1 text-muted-foreground">
-              {savingsProgress}% completed
+              {savingsProgress}% {labels?.completedSuffix || 'completed'}
             </p>
           </div>
 

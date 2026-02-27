@@ -9,9 +9,22 @@ import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 interface Props {
   transactions: any[]
   title: string
+  language?: 'id' | 'en'
+  labels?: {
+    sevenDays?: string
+    thirtyDays?: string
+    totalIncome?: string
+    totalExpense?: string
+    all?: string
+    income?: string
+    expense?: string
+    empty?: string
+    incomeFallback?: string
+    expenseFallback?: string
+  }
 }
 
-export function TransactionNotesCard({ transactions, title }: Props) {
+export function TransactionNotesCard({ transactions, title, language = 'id', labels }: Props) {
   const [rangeDays, setRangeDays] = useState<7 | 30>(7)
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
 
@@ -65,29 +78,29 @@ export function TransactionNotesCard({ transactions, title }: Props) {
               <Button
                 size="sm"
                 variant={rangeDays === 7 ? 'default' : 'outline'}
-                onClick={() => setRangeDays(7)}
-              >
-                7 Hari
-              </Button>
+              onClick={() => setRangeDays(7)}
+            >
+              {labels?.sevenDays || '7 Hari'}
+            </Button>
               <Button
                 size="sm"
                 variant={rangeDays === 30 ? 'default' : 'outline'}
-                onClick={() => setRangeDays(30)}
-              >
-                30 Hari
-              </Button>
+              onClick={() => setRangeDays(30)}
+            >
+              {labels?.thirtyDays || '30 Hari'}
+            </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="rounded-lg border bg-green-500/5 p-3">
-              <p className="text-xs text-muted-foreground">Total Pemasukan</p>
+              <p className="text-xs text-muted-foreground">{labels?.totalIncome || 'Total Pemasukan'}</p>
               <p className="font-semibold text-green-600">
                 +Rp {incomeTotal.toLocaleString('id-ID')}
               </p>
             </div>
             <div className="rounded-lg border bg-red-500/5 p-3">
-              <p className="text-xs text-muted-foreground">Total Pengeluaran</p>
+              <p className="text-xs text-muted-foreground">{labels?.totalExpense || 'Total Pengeluaran'}</p>
               <p className="font-semibold text-red-600">
                 -Rp {expenseTotal.toLocaleString('id-ID')}
               </p>
@@ -100,21 +113,21 @@ export function TransactionNotesCard({ transactions, title }: Props) {
               variant={typeFilter === 'all' ? 'default' : 'outline'}
               onClick={() => setTypeFilter('all')}
             >
-              Semua
+              {labels?.all || 'Semua'}
             </Button>
             <Button
               size="sm"
               variant={typeFilter === 'income' ? 'default' : 'outline'}
               onClick={() => setTypeFilter('income')}
             >
-              Pemasukan
+              {labels?.income || 'Pemasukan'}
             </Button>
             <Button
               size="sm"
               variant={typeFilter === 'expense' ? 'default' : 'outline'}
               onClick={() => setTypeFilter('expense')}
             >
-              Pengeluaran
+              {labels?.expense || 'Pengeluaran'}
             </Button>
           </div>
         </div>
@@ -122,7 +135,7 @@ export function TransactionNotesCard({ transactions, title }: Props) {
       <CardContent className="space-y-3 max-h-[420px] overflow-auto hide-scrollbar">
         {sorted.length === 0 && (
           <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            Belum ada catatan transaksi untuk filter ini.
+            {labels?.empty || 'Belum ada catatan transaksi untuk filter ini.'}
           </div>
         )}
 
@@ -148,13 +161,13 @@ export function TransactionNotesCard({ transactions, title }: Props) {
                       {item.description || item.category || '-'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(item.created_at).toLocaleString('id-ID')}
+                      {new Date(item.created_at).toLocaleString(language === 'en' ? 'en-US' : 'id-ID')}
                     </p>
                   </div>
                 </div>
 
                 <Badge variant="outline" className="shrink-0">
-                  {item.category || (isIncome ? 'Income' : 'Expense')}
+                  {item.category || (isIncome ? (labels?.incomeFallback || 'Income') : (labels?.expenseFallback || 'Expense'))}
                 </Badge>
               </div>
             </div>
