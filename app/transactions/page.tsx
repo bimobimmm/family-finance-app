@@ -94,6 +94,13 @@ export default function TransactionsPage() {
         payload,
       ]).select('*').maybeSingle()
 
+      if (error) {
+        toast.error('Gagal menyimpan transaksi', {
+          description: error.message,
+        })
+        return
+      }
+
       if (!error && data?.id) {
         await writeActivityLog(supabase, {
           actor_user_id: user.id,

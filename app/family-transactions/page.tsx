@@ -88,6 +88,13 @@ export default function FamilyTransactionsPage() {
           .select('*')
           .maybeSingle()
 
+        if (error) {
+          toast.error('Gagal update transaksi family', {
+            description: error.message,
+          })
+          return
+        }
+
         if (!error && data?.id) {
           await writeActivityLog(supabase, {
             actor_user_id: user.id,
@@ -123,6 +130,13 @@ export default function FamilyTransactionsPage() {
       const { data, error } = await supabase.from('transactions').insert([
         payload,
       ]).select('*').maybeSingle()
+
+      if (error) {
+        toast.error('Gagal menyimpan transaksi family', {
+          description: error.message,
+        })
+        return
+      }
 
       if (!error && data?.id) {
         await writeActivityLog(supabase, {
