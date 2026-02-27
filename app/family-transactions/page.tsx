@@ -10,6 +10,8 @@ import { TransactionList } from '@/components/transactions/transaction-list'
 import { Spinner } from '@/components/ui/spinner'
 import { ArrowLeft } from 'lucide-react'
 import { writeActivityLog } from '@/lib/activity-log'
+import { getSavingWarning } from '@/lib/saving-warning'
+import { toast } from 'sonner'
 
 export default function FamilyTransactionsPage() {
 
@@ -21,6 +23,7 @@ export default function FamilyTransactionsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [transactions, setTransactions] = useState<any[]>([])
   const [familyId, setFamilyId] = useState<string | null>(null)
+  const [editingTransaction, setEditingTransaction] = useState<any | null>(null)
 
   useEffect(() => {
     init()
@@ -72,6 +75,39 @@ export default function FamilyTransactionsPage() {
     setSubmitting(true)
 
     try {
+      if (editingTransaction) {
+        const { data, error } = await supabase
+          .from('transactions')
+          .update({
+            type: formData.type,
+            amount: parseFloat(formData.amount),
+            category: formData.category,
+            description: formData.description,
+          })
+          .eq('id', editingTransaction.id)
+          .select('*')
+          .maybeSingle()
+
+        if (!error && data?.id) {
+          await writeActivityLog(supabase, {
+            actor_user_id: user.id,
+            action: 'update',
+            entity_type: 'transaction',
+            entity_id: data.id,
+            scope: 'family',
+            family_id: familyId,
+            note: `${data.type} ${data.category} Rp ${Number(data.amount || 0).toLocaleString('id-ID')}${data.description ? ` | ${data.description}` : ''}`,
+          })
+        }
+
+        if (!error) {
+          setEditingTransaction(null)
+          await loadTransactions(familyId)
+        }
+
+        return
+      }
+
       const payload = {
         user_id: user.id,
         family_id: familyId,
@@ -96,16 +132,63 @@ export default function FamilyTransactionsPage() {
           entity_id: data.id,
           scope: 'family',
           family_id: familyId,
-          note: `${data.type} ${data.category} Rp ${Number(data.amount || 0).toLocaleString('id-ID')}`,
+          note: `${data.type} ${data.category} Rp ${Number(data.amount || 0).toLocaleString('id-ID')}${data.description ? ` | ${data.description}` : ''}`,
         })
       }
 
       if (!error) {
+        setEditingTransaction(null)
         await loadTransactions(familyId)
+
+        const amountText = `Rp ${Number(data?.amount || formData.amount || 0).toLocaleString('id-ID')}`
+        const detail = `${data?.category || formData.category}${(data?.description || formData.description) ? ` | ${data?.description || formData.description}` : ''}`
+
+        if (formData.type === 'income') {
+          toast.success('Pemasukan family berhasil dicatat :)', {
+            description: `+${amountText} | ${detail}`,
+          })
+        } else {
+          toast.error('Pengeluaran family tercatat :(', {
+            description: `-${amountText} | ${detail}`,
+          })
+        }
+
+        if (formData.type === 'expense') {
+          await showFamilySavingWarning(familyId)
+        }
       }
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function showFamilySavingWarning(fid: string) {
+    const { data: trx } = await supabase
+      .from('transactions')
+      .select('type, amount')
+      .eq('scope', 'family')
+      .eq('family_id', fid)
+
+    const { data: savings } = await supabase
+      .from('savings_targets')
+      .select('target_amount')
+      .eq('scope', 'family')
+      .eq('family_id', fid)
+
+    let balance = 0
+    ;(trx || []).forEach((t: any) => {
+      const amount = Number(t.amount || 0)
+      if (t.type === 'income') balance += amount
+      if (t.type === 'expense') balance -= amount
+    })
+
+    const target = (savings || []).reduce(
+      (sum: number, s: any) => sum + Number(s.target_amount || 0),
+      0,
+    )
+
+    const warning = getSavingWarning(balance, target)
+    if (warning) alert(warning)
   }
 
   async function handleDelete(id: string) {
@@ -130,7 +213,7 @@ export default function FamilyTransactionsPage() {
       scope: 'family',
       family_id: familyId,
       note: existing
-        ? `${existing.type} ${existing.category} Rp ${Number(existing.amount || 0).toLocaleString('id-ID')}`
+        ? `${existing.type} ${existing.category} Rp ${Number(existing.amount || 0).toLocaleString('id-ID')}${existing.description ? ` | ${existing.description}` : ''}`
         : 'Transaction deleted',
     })
 
@@ -168,14 +251,26 @@ export default function FamilyTransactionsPage() {
             <TransactionForm
               onSubmit={handleAdd}
               loading={submitting}
+              defaultValues={editingTransaction}
             />
+            {editingTransaction && (
+              <Button
+                className="mt-3 w-full"
+                variant="outline"
+                onClick={() => setEditingTransaction(null)}
+              >
+                Cancel Edit
+              </Button>
+            )}
           </div>
 
           <div className="lg:col-span-2">
             <TransactionList
               transactions={transactions}
+              onEdit={(transaction) => setEditingTransaction(transaction)}
               onDelete={handleDelete}
               currentUserId={user?.id}
+              canManageAll
             />
           </div>
         </div>

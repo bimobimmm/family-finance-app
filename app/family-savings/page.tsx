@@ -20,6 +20,7 @@ export default function FamilySavingsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [targets, setTargets] = useState<any[]>([])
   const [familyId, setFamilyId] = useState<string | null>(null)
+  const [editingTarget, setEditingTarget] = useState<any | null>(null)
 
   useEffect(() => {
     init()
@@ -76,6 +77,42 @@ export default function FamilySavingsPage() {
     setSubmitting(true)
 
     try {
+      if (editingTarget) {
+        const { data, error } = await supabase
+          .from('savings_targets')
+          .update({
+            name: formData.name,
+            target_amount: parseFloat(formData.targetAmount),
+            current_amount: parseFloat(formData.currentAmount),
+            due_date: formData.dueDate || null,
+            notes: formData.notes,
+          })
+          .eq('id', editingTarget.id)
+          .select('*')
+          .maybeSingle()
+
+        if (!error && data?.id) {
+          await writeActivityLog(supabase, {
+            actor_user_id: user.id,
+            action: 'update',
+            entity_type: 'savings_target',
+            entity_id: data.id,
+            scope: 'family',
+            family_id: familyId,
+            note: `${data.name} target Rp ${Number(data.target_amount || 0).toLocaleString('id-ID')}`,
+          })
+        }
+
+        if (error) {
+          alert(error.message)
+          return
+        }
+
+        setEditingTarget(null)
+        await loadTargets(familyId)
+        return
+      }
+
       const payload = {
         user_id: user.id,
         family_id: familyId,
@@ -110,6 +147,7 @@ export default function FamilySavingsPage() {
         return
       }
 
+      setEditingTarget(null)
       await loadTargets(familyId)
     } finally {
       setSubmitting(false)
@@ -181,14 +219,36 @@ export default function FamilySavingsPage() {
             <SavingsForm
               onSubmit={handleAdd}
               loading={submitting}
+              defaultValues={
+                editingTarget
+                  ? {
+                      name: editingTarget.name || '',
+                      targetAmount: String(editingTarget.target_amount ?? ''),
+                      currentAmount: String(editingTarget.current_amount ?? '0'),
+                      dueDate: editingTarget.due_date || '',
+                      notes: editingTarget.notes || '',
+                    }
+                  : undefined
+              }
             />
+            {editingTarget && (
+              <Button
+                className="mt-3 w-full"
+                variant="outline"
+                onClick={() => setEditingTarget(null)}
+              >
+                Cancel Edit
+              </Button>
+            )}
           </div>
 
           <div className="lg:col-span-2">
             <SavingsList
               targets={targets}
+              onEdit={(target) => setEditingTarget(target)}
               onDelete={handleDelete}
               currentUserId={user?.id}
+              canManageAll
             />
           </div>
         </div>

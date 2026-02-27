@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 
 interface SavingsTarget {
   id: string
@@ -20,17 +20,20 @@ interface SavingsTarget {
 interface SavingsListProps {
   targets?: SavingsTarget[]
   loading?: boolean
+  onEdit?: (target: SavingsTarget) => void
   onDelete?: (id: string) => void
   currentUserId?: string
+  canManageAll?: boolean
 }
 
 export function SavingsList({
   targets = [],
   loading = false,
+  onEdit,
   onDelete,
   currentUserId,
+  canManageAll = false,
 }: SavingsListProps) {
-
   if (loading) {
     return (
       <Card>
@@ -67,7 +70,6 @@ export function SavingsList({
 
       <CardContent className="space-y-6">
         {targets.map((target) => {
-
           const percentage = Math.round(
             (target.current_amount / target.target_amount) * 100
           )
@@ -76,7 +78,6 @@ export function SavingsList({
 
           return (
             <div key={target.id} className="border rounded-lg p-4 space-y-3">
-
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-semibold text-lg">{target.name}</h3>
@@ -87,16 +88,28 @@ export function SavingsList({
                   )}
                 </div>
 
-                {onDelete &&
-                  target.created_by === currentUserId && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onDelete(target.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                {(canManageAll || target.created_by === currentUserId) && (
+                  <div className="flex items-center gap-1">
+                    {onEdit && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onEdit(target)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onDelete(target.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

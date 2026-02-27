@@ -64,12 +64,18 @@ export function SpendingChart({ transactions }: Props) {
   }, [transactions, rangeDays])
 
   const hasExpenseData = data.some((item) => item.spending > 0)
+  const total = data.reduce((sum, item) => sum + item.spending, 0)
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
-          <CardTitle>Daily Spending</CardTitle>
+          <div>
+            <CardTitle>Daily Spending</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Total periode: Rp {total.toLocaleString('id-ID')}
+            </p>
+          </div>
 
           <div className="flex gap-2">
             <Button
@@ -90,23 +96,32 @@ export function SpendingChart({ transactions }: Props) {
         </div>
       </CardHeader>
 
-      <CardContent className="h-[260px]">
+      <CardContent className="h-[300px]">
         {!hasExpenseData ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
+          <div className="flex h-full items-center justify-center rounded-xl border border-dashed text-muted-foreground">
             No expense data in the selected period
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
-              margin={{ top: 10, right: 10, left: 20, bottom: 0 }}
-              barCategoryGap="20%"
+              margin={{ top: 14, right: 8, left: 8, bottom: 0 }}
+              barCategoryGap="28%"
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <defs>
+                <linearGradient id="spendingBarGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2563eb" stopOpacity={0.95} />
+                  <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.8} />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid strokeDasharray="4 4" stroke="hsl(var(--border))" />
 
               <XAxis
                 dataKey="dateLabel"
                 tick={{ fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
               />
 
               <YAxis
@@ -116,28 +131,38 @@ export function SpendingChart({ transactions }: Props) {
                   }).format(v)
                 }
                 tick={{ fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
               />
 
               <Tooltip
-                labelFormatter={(_, payload) => {
-                  const rawDate = payload?.[0]?.payload?.date
-                  if (!rawDate) return ''
-                  return new Date(rawDate).toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric',
-                  })
+                cursor={{ fill: 'hsl(var(--accent))', fillOpacity: 0.25 }}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null
+
+                  const row = payload[0].payload
+                  return (
+                    <div className="rounded-lg border bg-background px-3 py-2 shadow-sm">
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(row.date).toLocaleDateString('id-ID', {
+                          day: '2-digit',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </p>
+                      <p className="text-sm font-semibold">
+                        Rp {Number(row.spending || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  )
                 }}
-                formatter={(v: any) =>
-                  `Rp ${new Intl.NumberFormat('id-ID').format(v)}`
-                }
               />
 
               <Bar
                 dataKey="spending"
-                fill="#3b82f6"
-                radius={[6, 6, 0, 0]}
-                barSize={40}
+                fill="url(#spendingBarGradient)"
+                radius={[10, 10, 0, 0]}
+                barSize={rangeDays === 7 ? 34 : 16}
               />
             </BarChart>
           </ResponsiveContainer>

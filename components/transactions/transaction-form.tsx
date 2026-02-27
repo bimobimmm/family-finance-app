@@ -30,6 +30,17 @@ const TRANSACTION_TYPES = [
   { value: 'income', label: 'Income' },
 ]
 
+function formatCurrencyInput(value: string) {
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+  return new Intl.NumberFormat('id-ID').format(Number(digits))
+}
+
+function parseCurrencyInput(value: string) {
+  const digits = value.replace(/\D/g, '')
+  return digits ? Number(digits) : 0
+}
+
 interface TransactionFormProps {
   onSubmit: (data: any) => void
   loading?: boolean
@@ -49,7 +60,7 @@ export function TransactionForm({
   useEffect(() => {
     if (defaultValues) {
       setType(defaultValues.type)
-      setAmount(String(defaultValues.amount))
+      setAmount(formatCurrencyInput(String(defaultValues.amount)))
       setCategory(defaultValues.category)
       setDescription(defaultValues.description || '')
     }
@@ -60,7 +71,7 @@ export function TransactionForm({
     onSubmit({
       ...defaultValues,
       type,
-      amount: Number(amount),
+      amount: parseCurrencyInput(amount),
       category,
       description,
     })
@@ -101,9 +112,10 @@ export function TransactionForm({
             <div className="space-y-2">
               <Label>Amount (Rp)</Label>
               <Input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(formatCurrencyInput(e.target.value))}
                 required
                 disabled={loading}
               />

@@ -10,6 +10,8 @@ import { TransactionForm } from '@/components/transactions/transaction-form'
 import { TransactionList } from '@/components/transactions/transaction-list'
 import { ArrowLeft } from 'lucide-react'
 import { writeActivityLog } from '@/lib/activity-log'
+import { getSavingWarning } from '@/lib/saving-warning'
+import { toast } from 'sonner'
 
 export default function TransactionsPage() {
   const router = useRouter()
@@ -101,7 +103,7 @@ export default function TransactionsPage() {
           scope,
           target_user_id: scope === 'personal' ? user.id : null,
           family_id: scope === 'family' ? familyId : null,
-          note: `${data.type} ${data.category} Rp ${Number(data.amount || 0).toLocaleString('id-ID')}`,
+          note: `${data.type} ${data.category} Rp ${Number(data.amount || 0).toLocaleString('id-ID')}${data.description ? ` | ${data.description}` : ''}`,
         })
       }
 
@@ -110,10 +112,90 @@ export default function TransactionsPage() {
           user.id,
           scope === 'family' ? familyId : null
         )
+
+        const amountText = `Rp ${Number(data?.amount || formData.amount || 0).toLocaleString('id-ID')}`
+        const detail = `${data?.category || formData.category}${(data?.description || formData.description) ? ` | ${data?.description || formData.description}` : ''}`
+
+        if (formData.type === 'income') {
+          toast.success('Pemasukan berhasil dicatat :)', {
+            description: `+${amountText} | ${detail}`,
+          })
+        } else {
+          toast.error('Pengeluaran tercatat :(', {
+            description: `-${amountText} | ${detail}`,
+          })
+        }
+
+        if (formData.type === 'expense') {
+          await showSavingWarning(scope, user.id, scope === 'family' ? familyId : null)
+        }
       }
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function showSavingWarning(
+    modeScope: 'personal' | 'family',
+    userId: string,
+    modeFamilyId: string | null,
+  ) {
+    if (modeScope === 'family' && modeFamilyId) {
+      const { data: trx } = await supabase
+        .from('transactions')
+        .select('type, amount')
+        .eq('scope', 'family')
+        .eq('family_id', modeFamilyId)
+
+      const { data: savings } = await supabase
+        .from('savings_targets')
+        .select('target_amount')
+        .eq('scope', 'family')
+        .eq('family_id', modeFamilyId)
+
+      let balance = 0
+      ;(trx || []).forEach((t: any) => {
+        const amount = Number(t.amount || 0)
+        if (t.type === 'income') balance += amount
+        if (t.type === 'expense') balance -= amount
+      })
+
+      const target = (savings || []).reduce(
+        (sum: number, s: any) => sum + Number(s.target_amount || 0),
+        0,
+      )
+
+      const warning = getSavingWarning(balance, target)
+      if (warning) alert(warning)
+      return
+    }
+
+    const { data: trx } = await supabase
+      .from('transactions')
+      .select('type, amount')
+      .eq('scope', 'personal')
+      .eq('user_id', userId)
+
+    const { data: savings } = await supabase
+      .from('savings_targets')
+      .select('target_amount')
+      .eq('scope', 'personal')
+      .eq('user_id', userId)
+
+    let balance = 0
+    ;(trx || []).forEach((t: any) => {
+      const amount = Number(t.amount || 0)
+      if (t.type === 'income') balance += amount
+      if (t.type === 'expense') balance -= amount
+    })
+
+    const target = (savings || []).reduce(
+      (sum: number, s: any) => sum + Number(s.target_amount || 0),
+      0,
+    )
+
+    const warning = getSavingWarning(balance, target)
+    if (warning) alert(warning)
   }
 
   async function handleDeleteTransaction(id: string) {
@@ -136,7 +218,7 @@ export default function TransactionsPage() {
       target_user_id: scope === 'personal' ? user.id : null,
       family_id: scope === 'family' ? familyId : null,
       note: existing
-        ? `${existing.type} ${existing.category} Rp ${Number(existing.amount || 0).toLocaleString('id-ID')}`
+        ? `${existing.type} ${existing.category} Rp ${Number(existing.amount || 0).toLocaleString('id-ID')}${existing.description ? ` | ${existing.description}` : ''}`
         : 'Transaction deleted',
     })
 
@@ -175,7 +257,7 @@ export default function TransactionsPage() {
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
 
         {/* Mode Switch */}
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Button
             variant={scope === 'personal' ? 'default' : 'outline'}
             onClick={() => {

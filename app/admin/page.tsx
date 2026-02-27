@@ -309,8 +309,8 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/dashboard">
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-5 w-5" />
@@ -323,7 +323,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+          <Button className="w-full sm:w-auto" variant="outline" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className="h-4 w-4 mr-2" />
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
@@ -340,7 +340,7 @@ export default function AdminDashboardPage() {
         )}
 
         <Tabs defaultValue="overview">
-          <TabsList>
+          <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="database">Database</TabsTrigger>
           </TabsList>
@@ -482,8 +482,8 @@ export default function AdminDashboardPage() {
                 <CardTitle className="text-base">Database Explorer</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-64">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="w-full sm:w-64">
                     <Select value={selectedTable} onValueChange={handleTableChange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Choose table" />

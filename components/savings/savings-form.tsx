@@ -1,11 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+
+function formatCurrencyInput(value: string) {
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+  return new Intl.NumberFormat('id-ID').format(Number(digits))
+}
+
+function toNumericString(value: string) {
+  const digits = value.replace(/\D/g, '')
+  return digits || '0'
+}
 
 interface SavingsFormProps {
   onSubmit: (data: any) => void
@@ -30,17 +41,35 @@ export function SavingsForm({
   const [dueDate, setDueDate] = useState(defaultValues?.dueDate || '')
   const [notes, setNotes] = useState(defaultValues?.notes || '')
 
+  useEffect(() => {
+    setName(defaultValues?.name || '')
+    setTargetAmount(formatCurrencyInput(defaultValues?.targetAmount || ''))
+    setCurrentAmount(formatCurrencyInput(defaultValues?.currentAmount || '0'))
+    setDueDate(defaultValues?.dueDate || '')
+    setNotes(defaultValues?.notes || '')
+  }, [defaultValues])
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    onSubmit({ name, targetAmount, currentAmount, dueDate, notes })
+    onSubmit({
+      name,
+      targetAmount: toNumericString(targetAmount),
+      currentAmount: toNumericString(currentAmount),
+      dueDate,
+      notes,
+    })
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create Savings Goal</CardTitle>
+        <CardTitle>
+          {defaultValues ? 'Edit Savings Goal' : 'Create Savings Goal'}
+        </CardTitle>
         <CardDescription>
-          Set up a new savings target to work towards
+          {defaultValues
+            ? 'Update your savings target details'
+            : 'Set up a new savings target to work towards'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -62,11 +91,11 @@ export function SavingsForm({
               <Label htmlFor="targetAmount">Target Amount ($)</Label>
               <Input
                 id="targetAmount"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 placeholder="5000.00"
-                step="0.01"
                 value={targetAmount}
-                onChange={(e) => setTargetAmount(e.target.value)}
+                onChange={(e) => setTargetAmount(formatCurrencyInput(e.target.value))}
                 required
                 disabled={loading}
               />
@@ -76,11 +105,11 @@ export function SavingsForm({
               <Label htmlFor="currentAmount">Current Amount ($)</Label>
               <Input
                 id="currentAmount"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 placeholder="0.00"
-                step="0.01"
                 value={currentAmount}
-                onChange={(e) => setCurrentAmount(e.target.value)}
+                onChange={(e) => setCurrentAmount(formatCurrencyInput(e.target.value))}
                 disabled={loading}
               />
             </div>
@@ -109,7 +138,11 @@ export function SavingsForm({
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Creating...' : 'Create Goal'}
+            {loading
+              ? 'Saving...'
+              : defaultValues
+              ? 'Update Goal'
+              : 'Create Goal'}
           </Button>
         </form>
       </CardContent>

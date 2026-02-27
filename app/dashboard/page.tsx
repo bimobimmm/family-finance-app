@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { OverviewCards } from '@/components/dashboard/overview-cards'
 import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { CategoryBreakdown } from '@/components/dashboard/category-breakdown'
+import { TransactionNotesCard } from '@/components/dashboard/transaction-notes-card'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function DashboardPage() {
@@ -123,15 +124,15 @@ export default function DashboardPage() {
 
       {/* HEADER */}
       <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <h1 className="text-3xl font-bold">Save Your Money!</h1>
             <p className="text-muted-foreground mt-1">
               Welcome back, {user?.email}
             </p>
           </div>
 
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             <ThemeToggle />
 
             {isAdmin && (
@@ -156,7 +157,7 @@ export default function DashboardPage() {
       </div>
 
       {/* CONTENT */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
 
         {/* OVERVIEW CARDS */}
         <OverviewCards
@@ -171,6 +172,11 @@ export default function DashboardPage() {
           <SpendingChart transactions={transactions} />
           <CategoryBreakdown transactions={transactions} />
         </div>
+
+        <TransactionNotesCard
+          transactions={transactions}
+          title="Catatan Pemasukan & Pengeluaran"
+        />
 
         {/* QUICK ACTION CARDS (RESTORED) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

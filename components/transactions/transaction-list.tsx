@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 interface Transaction {
@@ -20,17 +20,20 @@ interface Transaction {
 interface TransactionListProps {
   transactions?: Transaction[]
   loading?: boolean
+  onEdit?: (transaction: Transaction) => void
   onDelete?: (id: string) => void
   currentUserId?: string
+  canManageAll?: boolean
 }
 
 export function TransactionList({
   transactions = [],
   loading = false,
+  onEdit,
   onDelete,
   currentUserId,
+  canManageAll = false,
 }: TransactionListProps) {
-
   if (loading) {
     return (
       <Card>
@@ -103,17 +106,28 @@ export function TransactionList({
                   {transaction.type === 'income' ? '+' : '-'}Rp {transaction.amount.toLocaleString()}
                 </Badge>
 
-                {/* 🔐 Hanya creator bisa delete */}
-                {onDelete &&
-                  transaction.created_by === currentUserId && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onDelete(transaction.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                {(canManageAll || transaction.created_by === currentUserId) && (
+                  <div className="flex items-center gap-1">
+                    {onEdit && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onEdit(transaction)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onDelete(transaction.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}

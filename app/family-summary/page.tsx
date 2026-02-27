@@ -36,8 +36,7 @@ export default function FamilySummaryPage() {
   const [transactionsCount, setTransactionsCount] = useState(0)
   const [savingsTargetAdded, setSavingsTargetAdded] = useState(0)
   const [savingsCreatedCount, setSavingsCreatedCount] = useState(0)
-  const [history, setHistory] = useState<any[]>([])
-  const [historyError, setHistoryError] = useState<string | null>(null)
+  const [notes, setNotes] = useState<any[]>([])
   const [familyId, setFamilyId] = useState<string | null>(null)
 
   const net = useMemo(() => income - expense, [income, expense])
@@ -98,6 +97,11 @@ export default function FamilySummaryPage() {
     setIncome(totalIncome)
     setExpense(totalExpense)
     setTransactionsCount((trx || []).length)
+    setNotes(
+      [...(trx || [])]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 20),
+    )
 
     const { data: savings } = await supabase
       .from('savings_targets')
@@ -115,23 +119,6 @@ export default function FamilySummaryPage() {
     setSavingsTargetAdded(totalTargetAdded)
     setSavingsCreatedCount((savings || []).length)
 
-    const { data: logs, error: logsError } = await supabase
-      .from('activity_logs')
-      .select('*')
-      .eq('scope', 'family')
-      .eq('family_id', fid)
-      .gte('created_at', start)
-      .lt('created_at', end)
-      .order('created_at', { ascending: false })
-      .limit(100)
-
-    if (logsError) {
-      setHistory([])
-      setHistoryError(logsError.message)
-    } else {
-      setHistory(logs || [])
-      setHistoryError(null)
-    }
   }
 
   if (loading) {
@@ -201,22 +188,16 @@ export default function FamilySummaryPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">History Perubahan Data</CardTitle>
+            <CardTitle className="text-base">Catatan Pemasukan & Pengeluaran</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {historyError && (
-              <p className="text-sm text-destructive">
-                History belum tersedia: {historyError}
-              </p>
-            )}
-
-            {history.map((item) => (
+            {notes.map((item) => (
               <div key={item.id} className="border rounded-md px-3 py-2 text-sm flex items-center justify-between">
                 <div>
-                  <p className="font-medium">
-                    {String(item.action || '').toUpperCase()} {item.entity_type}
+                  <p className={`font-medium ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                    {item.type === 'income' ? '+' : '-'}Rp {Number(item.amount || 0).toLocaleString('id-ID')}
                   </p>
-                  <p className="text-muted-foreground">{item.note || '-'}</p>
+                  <p className="text-muted-foreground">{item.description || item.category || '-'}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {new Date(item.created_at).toLocaleString('id-ID')}
@@ -224,8 +205,8 @@ export default function FamilySummaryPage() {
               </div>
             ))}
 
-            {!historyError && history.length === 0 && (
-              <p className="text-sm text-muted-foreground">No history in selected month.</p>
+            {notes.length === 0 && (
+              <p className="text-sm text-muted-foreground">No transaction notes in selected month.</p>
             )}
           </CardContent>
         </Card>

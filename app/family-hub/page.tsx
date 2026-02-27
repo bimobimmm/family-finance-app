@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { OverviewCards } from '@/components/dashboard/overview-cards'
 import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { CategoryBreakdown } from '@/components/dashboard/category-breakdown'
+import { TransactionNotesCard } from '@/components/dashboard/transaction-notes-card'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function FamilyHubPage() {
@@ -151,7 +152,7 @@ export default function FamilyHubPage() {
 
       {/* HEADER */}
       <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
 
           <div>
             <h1 className="text-3xl font-bold">Family Hub</h1>
@@ -160,7 +161,7 @@ export default function FamilyHubPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
 
             <Link href="/family-settings">
               <Button variant="outline">
@@ -193,7 +194,7 @@ export default function FamilyHubPage() {
       </div>
 
       {/* CONTENT */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
 
         <OverviewCards
           totalBalance={totalBalance}
@@ -206,6 +207,11 @@ export default function FamilyHubPage() {
           <SpendingChart transactions={transactions} />
           <CategoryBreakdown transactions={transactions} />
         </div>
+
+        <TransactionNotesCard
+          transactions={transactions}
+          title="Catatan Transaksi Family"
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
