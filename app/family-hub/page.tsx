@@ -345,12 +345,12 @@ export default function FamilyHubPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {menuCards.map((item) => (
             <Link key={item.href} href={item.href}>
-              <div className="group rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer min-h-[118px]">
+              <div className="group h-[168px] sm:h-[136px] rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer">
                 <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                   <item.icon className="h-4 w-4" />
                 </div>
                 <h3 className="font-semibold text-sm leading-tight">{item.title}</h3>
-                <p className="mt-1 h-8 text-xs text-muted-foreground leading-tight line-clamp-2">{item.desc}</p>
+                <p className="mt-1 h-10 text-xs text-muted-foreground leading-tight line-clamp-2">{item.desc}</p>
               </div>
             </Link>
           ))}
