@@ -75,18 +75,37 @@ export default function FamilyTransactionsPage() {
     setSubmitting(true)
 
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        toast.error('Sesi login tidak valid. Silakan login ulang.')
+        return
+      }
+
       if (editingTransaction) {
-        const { data, error } = await supabase
-          .from('transactions')
-          .update({
-            type: formData.type,
-            amount: parseFloat(formData.amount),
-            category: formData.category,
-            description: formData.description,
+        const res = await fetch('/api/family-transactions', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            id: editingTransaction.id,
+            familyId,
+            updates: {
+              type: formData.type,
+              amount: parseFloat(formData.amount),
+              category: formData.category,
+              description: formData.description,
+            },
           })
-          .eq('id', editingTransaction.id)
-          .select('*')
-          .maybeSingle()
+        })
+
+        const payload = await res.json().catch(() => ({}))
+        const data = payload?.row
+        const error = !res.ok ? { message: payload?.error || 'Failed to update transaction' } : null
 
         if (error) {
           toast.error('Gagal update transaksi family', {
@@ -199,16 +218,40 @@ export default function FamilyTransactionsPage() {
   async function handleDelete(id: string) {
     if (!familyId || !user) return
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      toast.error('Sesi login tidak valid. Silakan login ulang.')
+      return
+    }
+
     const { data: existing } = await supabase
       .from('transactions')
       .select('*')
       .eq('id', id)
       .maybeSingle()
 
-    await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', id)
+    const res = await fetch('/api/family-transactions', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        id,
+        familyId,
+      }),
+    })
+
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}))
+      toast.error('Gagal hapus transaksi family', {
+        description: payload?.error || 'Unknown error',
+      })
+      return
+    }
 
     await writeActivityLog(supabase, {
       actor_user_id: user.id,
