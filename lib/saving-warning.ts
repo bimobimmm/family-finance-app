@@ -3,20 +3,21 @@ const WARNING_THRESHOLDS = [10, 20, 30, 40, 50]
 export function getSavingWarning(totalBalance: number, savingsTarget: number) {
   if (savingsTarget <= 0) return null
 
-  const safeRemaining = totalBalance - savingsTarget
+  // If balance is already above target, warning should disappear.
+  if (totalBalance > savingsTarget) return null
 
-  if (safeRemaining <= 0) {
-    return 'Kamu sudah menyentuh atau melewati batas target saving.'
+  if (totalBalance === savingsTarget) {
+    return 'Saldo kamu tepat di batas target saving.'
   }
 
-  const safeRemainingPct = (safeRemaining / savingsTarget) * 100
+  const belowTargetPct = ((savingsTarget - totalBalance) / savingsTarget) * 100
   const nearestThreshold = WARNING_THRESHOLDS.find(
-    (threshold) => safeRemainingPct <= threshold,
+    (threshold) => belowTargetPct <= threshold,
   )
 
   if (nearestThreshold !== undefined) {
-    return `${nearestThreshold}% lagi kamu hampir mencapai batas saving yang kamu tentukan.`
+    return `Saldo kamu sekitar ${Math.ceil(belowTargetPct)}% di bawah target saving.`
   }
 
-  return null
+  return 'Kamu sudah melewati batas aman dari target saving.'
 }
