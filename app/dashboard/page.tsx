@@ -16,6 +16,7 @@ import {
   Users,
   UserRound,
   Shield,
+  HeartPulse,
 } from 'lucide-react'
 
 type Language = 'id' | 'en'
@@ -78,6 +79,8 @@ const COPY = {
       inputSavingDesc: 'Buka form target tabungan',
       summary: 'Laporan',
       summaryDesc: 'Ringkasan bulanan',
+      financialHealth: 'Financial Health',
+      financialHealthDesc: 'Skor kesehatan keuangan',
       family: 'Family Hub',
       familyDesc: 'Kelola keuangan keluarga',
       profile: 'Profile',
@@ -142,6 +145,8 @@ const COPY = {
       inputSavingDesc: 'Open savings target form',
       summary: 'Reports',
       summaryDesc: 'Monthly summary',
+      financialHealth: 'Financial Health',
+      financialHealthDesc: 'Finance health score',
       family: 'Family Hub',
       familyDesc: 'Manage family finance',
       profile: 'Profile',
@@ -173,7 +178,6 @@ export default function DashboardPage() {
     .filter(Boolean)
   const isAdmin = adminEmails.includes((user?.email || '').toLowerCase())
   const t = COPY[language]
-  const debugMarker = process.env.NODE_ENV === 'development' ? 'menu-rev-2026-02-27' : ''
 
   useEffect(() => {
     const stored = window.localStorage.getItem('app-language') as Language | null
@@ -264,6 +268,12 @@ export default function DashboardPage() {
         icon: FileText,
       },
       {
+        href: '/financial-health',
+        title: t.actions.financialHealth,
+        desc: t.actions.financialHealthDesc,
+        icon: HeartPulse,
+      },
+      {
         href: '/family-hub',
         title: t.actions.family,
         desc: t.actions.familyDesc,
@@ -306,9 +316,6 @@ export default function DashboardPage() {
             <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-all">
               {t.welcome}, {user?.email}
             </p>
-            {debugMarker && (
-              <p className="text-[10px] text-muted-foreground/70 mt-1">{debugMarker}</p>
-            )}
           </div>
 
           <div className="flex flex-wrap gap-2 items-center">

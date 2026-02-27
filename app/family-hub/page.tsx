@@ -11,7 +11,7 @@ import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { CategoryBreakdown } from '@/components/dashboard/category-breakdown'
 import { TransactionNotesCard } from '@/components/dashboard/transaction-notes-card'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { FileText, UserRound, Shield, Home } from 'lucide-react'
+import { FileText, UserRound, Shield, Home, HeartPulse } from 'lucide-react'
 
 type Language = 'id' | 'en'
 type FamilySection = 'overview' | 'analytics'
@@ -62,9 +62,11 @@ const COPY = {
     },
     actions: {
       report: 'Laporan',
-      reportDesc: 'Ringkasan bulanan family',
+      reportDesc: 'Ringkasan bulanan',
+      financialHealth: 'Financial Health',
+      financialHealthDesc: 'Skor kesehatan keuangan',
       personal: 'Personal',
-      personalDesc: 'Kembali ke dashboard personal',
+      personalDesc: 'Buka dashboard personal',
       profile: 'Profile',
       profileDesc: 'Data akun dan family',
       admin: 'Admin',
@@ -115,10 +117,12 @@ const COPY = {
       expenseFallback: 'Expense',
     },
     actions: {
-      report: 'Report',
-      reportDesc: 'Monthly family summary',
+      report: 'Reports',
+      reportDesc: 'Monthly summary',
+      financialHealth: 'Financial Health',
+      financialHealthDesc: 'Finance health score',
       personal: 'Personal',
-      personalDesc: 'Back to personal dashboard',
+      personalDesc: 'Open personal dashboard',
       profile: 'Profile',
       profileDesc: 'Account and family data',
       admin: 'Admin',
@@ -252,6 +256,12 @@ export default function FamilyHubPage() {
         icon: FileText,
       },
       {
+        href: '/financial-health',
+        title: t.actions.financialHealth,
+        desc: t.actions.financialHealthDesc,
+        icon: HeartPulse,
+      },
+      {
         href: '/dashboard',
         title: t.actions.personal,
         desc: t.actions.personalDesc,
@@ -332,7 +342,7 @@ export default function FamilyHubPage() {
           <h2 className="text-base font-semibold">Menu</h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {menuCards.map((item) => (
             <Link key={item.href} href={item.href}>
               <div className="group rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer min-h-[118px]">
@@ -340,7 +350,7 @@ export default function FamilyHubPage() {
                   <item.icon className="h-4 w-4" />
                 </div>
                 <h3 className="font-semibold text-sm leading-tight">{item.title}</h3>
-                <p className="mt-1 text-xs text-muted-foreground leading-tight">{item.desc}</p>
+                <p className="mt-1 h-8 text-xs text-muted-foreground leading-tight line-clamp-2">{item.desc}</p>
               </div>
             </Link>
           ))}
@@ -363,14 +373,40 @@ export default function FamilyHubPage() {
 
         <div className="mt-6 space-y-6">
           {activeSection === 'overview' && (
-            <OverviewCards
-              totalBalance={totalBalance}
-              monthlySpending={monthlySpending}
-              savingsTarget={savingsTarget}
-              savingsCurrent={savingsCurrent}
-              savingsProgress={savingsProgress}
-              labels={t.overviewLabels}
-            />
+            <>
+              <OverviewCards
+                totalBalance={totalBalance}
+                monthlySpending={monthlySpending}
+                savingsTarget={savingsTarget}
+                savingsCurrent={savingsCurrent}
+                savingsProgress={savingsProgress}
+                labels={t.overviewLabels}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Link href="/family-transactions">
+                  <div className="rounded-xl border border-border p-4 hover:bg-accent transition-colors cursor-pointer">
+                    <h3 className="font-semibold">
+                      {language === 'en' ? 'Input Family Transaction' : 'Input Transaksi Family'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {language === 'en' ? 'Open family transaction input form' : 'Buka form input transaksi family'}
+                    </p>
+                  </div>
+                </Link>
+
+                <Link href="/family-savings">
+                  <div className="rounded-xl border border-border p-4 hover:bg-accent transition-colors cursor-pointer">
+                    <h3 className="font-semibold">
+                      {language === 'en' ? 'Input Family Saving Plan' : 'Input Saving Plan Family'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {language === 'en' ? 'Open family savings target form' : 'Buka form target tabungan family'}
+                    </p>
+                  </div>
+                </Link>
+              </div>
+            </>
           )}
 
           {activeSection === 'analytics' && (
