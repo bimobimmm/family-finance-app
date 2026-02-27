@@ -332,7 +332,7 @@ export default function FamilyHubPage() {
           <h2 className="text-base font-semibold">Menu</h2>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {menuCards.map((item) => (
             <Link key={item.href} href={item.href}>
               <div className="group rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer min-h-[118px]">
