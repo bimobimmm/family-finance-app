@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
+import { PwaRegister } from '@/components/pwa-register'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
@@ -18,6 +19,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Family Finance',
   description: 'Manage your family finances with ease',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Family Finance',
+  },
+  icons: {
+    apple: '/apple-icon.png',
+  },
 }
 
 export const viewport: Viewport = {
@@ -39,6 +49,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
+          <PwaRegister />
           {children}
           <Toaster richColors position="top-right" />
           <Analytics />

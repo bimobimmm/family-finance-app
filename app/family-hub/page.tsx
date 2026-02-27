@@ -183,6 +183,12 @@ export default function FamilyHubPage() {
 
             <ThemeToggle />
 
+            <Link href="/profile">
+              <Button variant="outline">
+                Profile
+              </Button>
+            </Link>
+
             <Link href="/dashboard">
               <Button variant="outline">
                 Personal

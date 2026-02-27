@@ -145,6 +145,12 @@ export default function DashboardPage() {
               </Link>
             )}
 
+            <Link href="/profile">
+              <Button variant="outline">
+                Profile
+              </Button>
+            </Link>
+
             <Link href="/family-hub">
               <Button variant="outline">
                 Family Hub
