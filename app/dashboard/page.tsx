@@ -126,8 +126,10 @@ export default function DashboardPage() {
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Save Your Money!</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-xl sm:text-3xl font-bold leading-tight">
+              Save Your Money!
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-all">
               Welcome back, {user?.email}
             </p>
           </div>
